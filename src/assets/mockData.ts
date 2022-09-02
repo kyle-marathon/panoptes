@@ -20,11 +20,6 @@ export const MOCK_ITEMS = [
         id: "dnd-2-1",
         completed: 0,
       },
-      {
-        title: "Discover MHD stability",
-        id: "dnd-2-2",
-        completed: 0,
-      },
     ],
   },
   {

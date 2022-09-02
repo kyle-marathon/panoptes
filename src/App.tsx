@@ -1,21 +1,32 @@
 import useStyles, { StyleSheet } from "@airbnb/lunar/lib/hooks/useStyles";
 import { DragDropContext, Droppable, DropResult } from "react-beautiful-dnd";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { ref, set, update, onValue } from "firebase/database";
+import "firebaseui/dist/firebaseui.css";
+import { auth } from "./setup/setupFirebase";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { signOut } from "firebase/auth";
+import { useRecoilValue } from "recoil";
+
+import { db, lastIdPath } from "./setup/setupFirebase";
 
 import Input from "@airbnb/lunar/lib/components/Input";
 import Row from "@airbnb/lunar/lib/components/Row";
+import Button from "@airbnb/lunar/lib/components/Button";
 import Spacing from "@airbnb/lunar/lib/components/Spacing";
 import Switch from "@airbnb/lunar/lib/components/Switch";
 import DatePickerInput from "@airbnb/lunar/lib/components/DatePickerInput";
 
-import { MOCK_ITEMS, MOCK_CONFIG } from "./assets/mockData";
+import { MOCK_CONFIG } from "./assets/mockData";
 import { MemoizedTask } from "./components/Task";
-import Test from "./Test";
 import { keyCodes } from "./assets/constants";
 import { Items } from "./assets/types";
 
 import "./setup/setTheme";
+import "./setup/setupFirebase";
 import { isItemLive } from "./assets/utils";
+import { uidState, lastIdState } from "./atoms";
+import { iteratorSymbol } from "immer/dist/internal";
 
 export const appStyleSheet: StyleSheet = ({ color, font, unit }) => ({
   body: {
@@ -42,50 +53,74 @@ export const appStyleSheet: StyleSheet = ({ color, font, unit }) => ({
       boxShadow: `rgb(48 48 48 / 100%) 0px 4px 16px !important`,
     },
   },
-
-  // testafter: {
-  //   position: "relative",
-
-  //   ":after": {
-  //     content: '" wow "',
-  //     position: "absolute",
-  //     top: "100%",
-  //     left: 0,
-  //     right: 0,
-  //     height: unit / 2,
-  //     background: `linear-gradient(${toRGBA(
-  //       color.core.neutral[6],
-  //       15
-  //     )}, ${toRGBA(color.core.neutral[6], 0)})`,
-  //   },
-  // },
 });
 
 export default function App() {
-  const [items, setItems] = useState<Items>(MOCK_ITEMS);
+  const [items, setItems] = useState<Items>({});
   const [startDate, setStartDate] = useState<Date>(MOCK_CONFIG.startDate);
   const [endDate, setEndDate] = useState<Date>(MOCK_CONFIG.endDate);
   const [newItem, setNewItem] = useState("");
   const [styles, cx] = useStyles(appStyleSheet);
   const [showDetails, setShowDetails] = useState<boolean>(true);
   const [showCompleted, setShowCompleted] = useState<boolean>(true);
+  const [user, loading, error] = useAuthState(auth);
+  const uid = useRecoilValue(uidState);
+  const lastId = useRecoilValue(lastIdState);
 
-  // return <div className={cx(styles.testafter)}>hello world</div>;
-  // return <Test />;
+  useEffect(() => {
+    if (user) {
+      const tasksRef = ref(db, `${user.uid}/tasks`);
+      onValue(tasksRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          setItems(data);
+        }
+      });
+    }
+  }, [user]);
 
   const handleKeyDown = ({ keyCode }: any) => {
     if (keyCode == keyCodes.ENTER) {
-      setItems([
-        {
-          title: newItem,
-          id: `dnd-${items.length}`,
-          completed: 0,
-        },
-        ...items,
-      ]);
+      const newLastId = lastId + 1;
+      const path = `${uid}/tasks/task-${newLastId}`;
+      const newId = `task-${newLastId}`;
+      const smallestIndex = Object.values(items).reduce(
+        (acc, item) => (item.index < acc ? item.index : acc),
+        0
+      );
+      const newTask = {
+        title: newItem,
+        id: newId,
+        completed: 0,
+        subtasks: {},
+        index: smallestIndex - 1,
+      };
+
+      set(ref(db, path), newTask);
+
+      set(ref(db, `${uid}/${lastIdPath}`), newLastId);
+
+      setItems({ [newId]: newTask, ...items });
       setNewItem("");
     }
   };
+
+  const itemsArr = Object.values(items);
+  const filteredItems = showCompleted
+    ? itemsArr
+    : itemsArr
+        .filter((item) => isItemLive(item))
+        .map((item) => ({
+          ...item,
+          subtasks: item.subtasks
+            ? Object.values(item.subtasks).filter(
+                (subtask) => !subtask.completed
+              )
+            : {},
+        }));
+  const sortedItems = filteredItems.sort((a, b) =>
+    a.index > b.index ? 1 : -1
+  );
 
   const onDragEnd = (result: DropResult) => {
     const { destination, source } = result;
@@ -101,28 +136,44 @@ export default function App() {
       return;
     }
 
-    const newItems = Array.from(items);
-    newItems.splice(source.index, 1);
-    newItems.splice(destination.index, 0, items[source.index]);
-    setItems(newItems);
-  };
-
-  let filteredItems = showCompleted ? items : [];
-  if (!showCompleted) {
-    filteredItems = items
-      .filter((item) => isItemLive(item))
-      .map((item) => ({
+    const sourceId = sortedItems[source.index].id;
+    sortedItems.splice(source.index, 1);
+    sortedItems.splice(destination.index, 0, items[sourceId]);
+    const newItems: Items = {};
+    const updates: { [key: string]: number } = {};
+    sortedItems.forEach((item, index) => {
+      newItems[item.id] = {
         ...item,
-        subtasks: item.subtasks
-          ? item.subtasks.filter((subtask) => !subtask.completed)
-          : [],
-      }));
-  }
+        index,
+      };
+      updates[`${uid}/tasks/${item.id}/index`] = index;
+    });
 
-  console.log(startDate);
+    // const updates: UpdateData = {};
+    // Object.entries(newData).forEach(([key, value]) => {
+    //   updates[`${dbPath}/${key}`] = value;
+    // });
+    // const updates = {
+    //   [`${uid}/tasks/task-${newLastId}`]
+    // }
+    update(ref(db), updates);
+
+    setItems({ ...newItems });
+  };
 
   return (
     <Spacing inner all={3}>
+      <Spacing bottom={1.5}>
+        <Button
+          small
+          inverted
+          onClick={() => {
+            signOut(auth);
+          }}
+        >
+          Logout
+        </Button>
+      </Spacing>
       <div className={cx(styles.body)}>
         <Row
           after={
@@ -183,7 +234,7 @@ export default function App() {
           <Droppable droppableId={"droppable-1"}>
             {(provided) => (
               <div ref={provided.innerRef} {...provided.droppableProps}>
-                {filteredItems.map((item, index) => (
+                {sortedItems.map((item, index) => (
                   <MemoizedTask
                     key={item.id}
                     showDetails={showDetails}
@@ -209,6 +260,14 @@ export default function App() {
 // - Show progress relativel to progress in sprint
 // Sprints have cool names? Could auto increment, or be pokemon or something
 // Don't renew tasks past sprint end date
+// Create new item input should be separate component
+// What happens at the end of a sprint?
+// - Review and catalogue results
+// - Opion to carry over tasks
+// - - Or even mark tasks as always getting carried over?
+// - Set start date to previous end date
+// - Pick new end date
+// - Default is based on previous interval
 
 // Completed
 // Add advanced controls to data schema [DONE]
@@ -237,14 +296,4 @@ export default function App() {
 // required [DONE]
 // Set sprint end date [DONE]
 
-// Put everything in local storage or firebase
-// localStorage.setItem('KEY_NAME', JSON.stringify(obj))
-// JSON.parse(localStorage.getItem('KEY_NAME'))
-
-// What happens at the end of a sprint?
-// Review and catalogue results
-// Option to carry over tasks
-// - Or even mark tasks as always getting carried over?
-// Set start date to previous end date
-// Pick new end date
-// - Default is based on previous interval
+// Put everything in local storage or firebase [DONE]

@@ -26,7 +26,9 @@ type InlineInputProps = {
   completed?: number;
   value: string;
   callback: (value: string, props: any) => void;
+  callbackOnSubmit: (value: string, props: any) => void;
   callbackProps: any;
+  callbackOnSubmitProps?: any;
 };
 
 export default function InlineInput({
@@ -35,7 +37,9 @@ export default function InlineInput({
   completed,
   value,
   callback,
+  callbackOnSubmit,
   callbackProps,
+  callbackOnSubmitProps,
 }: InlineInputProps) {
   const [styles, cx] = useStyles(taskStyleSheet);
 
@@ -50,6 +54,9 @@ export default function InlineInput({
       value={value}
       onChange={({ target: { value } }: React.ChangeEvent<HTMLInputElement>) =>
         callback(value, callbackProps)
+      }
+      onBlur={({ target: { value } }: React.ChangeEvent<HTMLInputElement>) =>
+        callbackOnSubmit(value, callbackOnSubmitProps)
       }
     />
   );

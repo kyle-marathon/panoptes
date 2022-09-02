@@ -8,7 +8,7 @@ export const isItemRenewed = (item: Item) =>
   item.lastCompleted.length > 0 &&
   msToDays(
     new Date().getTime() -
-      item.lastCompleted[item.lastCompleted.length - 1]!.getTime()
+      new Date(item.lastCompleted[item.lastCompleted.length - 1]).getTime()
   ) > item.frequency;
 
 export const isItemExhausted = (item: Item) =>
@@ -18,7 +18,8 @@ export const isItemExhausted = (item: Item) =>
 export const isItemSatisfied = (item: Item) =>
   item.required &&
   item.subtasks &&
-  item.subtasks.filter((subtask) => subtask.completed).length >= item.required;
+  Object.values(item.subtasks).filter((subtask) => subtask.completed).length >=
+    item.required;
 
 export const isItemLive = (item: Item) => {
   return (

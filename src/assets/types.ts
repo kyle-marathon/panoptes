@@ -1,13 +1,16 @@
 export type Item = {
   title: string;
   id: string;
-  times?: number;
   completed: number;
+  index: number;
+  times?: number;
   frequency?: number;
   required?: number;
-  subtasks?: Subtask[];
+  subtasks?: Subtasks;
   lastCompleted?: Date[];
 };
+
+export type Items = { [key: string]: Item };
 
 export type Subtask = {
   title: string;
@@ -15,4 +18,4 @@ export type Subtask = {
   completed: number;
 };
 
-export type Items = Item[];
+export type Subtasks = { [key: string]: Subtask };

@@ -5,20 +5,26 @@
   "dependencies": {
     "@airbnb/lunar": "^3.29.0",
     "@airbnb/lunar-icons": "^3.1.1",
+    "@firebase/app": "^0.7.32",
+    "@firebase/auth": "^0.20.6",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^13.3.0",
     "@testing-library/user-event": "^13.5.0",
+    "@types/firebase": "^3.2.1",
     "@types/jest": "^27.5.2",
     "@types/node": "^16.11.56",
     "@types/react": "^18.0.17",
     "@types/react-beautiful-dnd": "^13.1.2",
     "@types/react-dom": "^18.0.6",
     "firebase": "^9.9.4",
+    "firebaseui": "^6.0.1",
     "immer": "^9.0.15",
     "react": "^18.2.0",
     "react-beautiful-dnd": "^13.1.0",
     "react-dom": "^18.2.0",
+    "react-firebase-hooks": "^5.0.3",
     "react-scripts": "5.0.1",
+    "recoil": "^0.7.5",
     "serve": "^14.0.1",
     "typescript": "^4.8.2",
     "web-vitals": "^2.1.4"
@@ -27,7 +33,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "deploy": "react-scripts build && firebase deploy"
   },
   "eslintConfig": {
     "extends": [

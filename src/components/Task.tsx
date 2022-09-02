@@ -1,7 +1,11 @@
 import useStyles, { StyleSheet } from "@airbnb/lunar/lib/hooks/useStyles";
 import produce from "immer";
-import { Dispatch, memo, SetStateAction, useState } from "react";
+import { Dispatch, memo, SetStateAction } from "react";
 import { Draggable } from "react-beautiful-dnd";
+import { set, update, ref, remove } from "firebase/database";
+import { useRecoilValue } from "recoil";
+
+import { db } from "../setup/setupFirebase";
 
 import IconButton from "@airbnb/lunar/lib/components/IconButton";
 import MenuToggle, {
@@ -9,6 +13,7 @@ import MenuToggle, {
 } from "@airbnb/lunar/lib/components/MenuToggle";
 import Spacing from "@airbnb/lunar/lib/components/Spacing";
 import IconCheck from "@airbnb/lunar-icons/lib/interface/IconCheck";
+import IconClose from "@airbnb/lunar-icons/lib/interface/IconClose";
 import IconCheckAlt from "@airbnb/lunar-icons/lib/interface/IconCheckAlt";
 import IconUndo from "@airbnb/lunar-icons/lib/interface/IconUndo";
 import IconMenuDotsVert from "@airbnb/lunar-icons/lib/interface/IconMenuDotsVert";
@@ -22,9 +27,11 @@ import Times from "./SubItems/Times";
 import SubItemCard from "./SubItems/SubItemCard";
 import InlineInput from "./InlineInput";
 
-import { Item, Items } from "../assets/types";
+import { Item, Items, Subtasks } from "../assets/types";
 import { fieldDefaults } from "../assets/constants";
-import { formatedDate, isItemExhausted, isItemLive } from "../assets/utils";
+import { formatedDate } from "../assets/utils";
+
+import { uidState } from "../atoms";
 
 type TaskProps = {
   showDetails: boolean;
@@ -42,17 +49,17 @@ export const taskStyleSheet: StyleSheet = ({ color, font, unit }) => ({
 
 function Task({ showDetails, index, setItems, item }: TaskProps) {
   const [styles, cx] = useStyles(taskStyleSheet);
+  const uid = useRecoilValue(uidState);
 
   const { title, id, completed, subtasks, required, times, frequency } = item;
+  const dbPath = `${uid}/tasks/${id}`;
+  const numSubtasks = subtasks ? Object.keys(subtasks).length : 0;
 
-  const setNewValue = (
-    newValue: number | string | any[],
-    field: string | (string | number)[]
-  ) => {
+  const setNewValue = (newValue: any, field: string | (string | number)[]) => {
     if (typeof field == "object") {
       setItems((items) =>
         produce(items, (draftState) => {
-          let tempObj = draftState[index];
+          let tempObj = { ...draftState };
           field.slice(0, -1).forEach((subField) => {
             // @ts-ignore
             tempObj = tempObj[subField];
@@ -62,14 +69,15 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
         })
       );
     } else if (typeof field == "string") {
-      setItems((items) => {
-        const newItems = [...items];
-        newItems.splice(index, 1, {
-          ...items[index],
+      set(ref(db, `${dbPath}/${field}`), newValue);
+
+      setItems((items) => ({
+        ...items,
+        [id]: {
+          ...item,
           [field]: newValue,
-        });
-        return newItems;
-      });
+        },
+      }));
     }
   };
 
@@ -77,108 +85,213 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
     setNewValue(fieldDefaults[type], type);
   };
 
+  type UpdateData = { [key: string]: any };
+
+  const handleUpdate = (newData: UpdateData) => {
+    const updates: UpdateData = {};
+    Object.entries(newData).forEach(([key, value]) => {
+      updates[`${dbPath}/${key}`] = value;
+    });
+    update(ref(db), updates);
+  };
+
   const handleComplete = () => {
+    const newData = {
+      completed: item.completed ? item.completed + 1 : 1,
+      lastCompleted: item.lastCompleted
+        ? [...item.lastCompleted, new Date()]
+        : [new Date()],
+    };
+
+    handleUpdate(newData);
+
     setItems((items) => {
-      const newItems = [...items];
-      const thisItem = items[index];
-      newItems.splice(index, 1, {
-        ...thisItem,
-        completed: thisItem.completed ? thisItem.completed + 1 : 1,
-        lastCompleted: item.lastCompleted
-          ? [...item.lastCompleted, new Date()]
-          : [new Date()],
-      });
+      const newItems = {
+        ...items,
+        [id]: {
+          ...item,
+          ...newData,
+        },
+      };
       return newItems;
     });
   };
 
   const handleUncomplete = () => {
+    const newData = {
+      completed: item.completed ? item.completed - 1 : 0,
+      lastCompleted:
+        item.lastCompleted && item.lastCompleted.length > 0
+          ? [...item.lastCompleted.slice(0, -1)]
+          : [],
+    };
+
+    handleUpdate(newData);
+
     setItems((items) => {
-      const newItems = [...items];
-      const thisItem = items[index];
-      newItems.splice(index, 1, {
-        ...thisItem,
-        completed: thisItem.completed ? thisItem.completed - 1 : 0,
-        lastCompleted:
-          item.lastCompleted && item.lastCompleted.length > 0
-            ? [...item.lastCompleted.slice(0, -1)]
-            : [],
-      });
-      return newItems;
+      return {
+        ...items,
+        [id]: {
+          ...item,
+          ...newData,
+        },
+      };
     });
   };
 
   const handleDelete = () => {
     setItems((items) => {
-      const newItems = [...items];
-      newItems.splice(index, 1);
+      const {
+        [id]: { ...oldItem },
+        ...newItems
+      } = items;
       return newItems;
     });
+    remove(ref(db, dbPath));
+  };
+
+  const deleteSubtask = (subtaskId: string) => {
+    // setItems((items) => {
+    //   const {
+    //     [subtaskId]: { ...oldSubtask },
+    //     ...newSubtasks
+    //   } = items[id].subtasks as Subtasks;
+    //   return {
+    //     ...items,
+    //     [id]: {
+    //       ...items[id],
+    //       subtasks: newSubtasks,
+    //     },
+    //   };
+    // });
+    remove(ref(db, `${dbPath}/subtasks/${subtaskId}`));
+  };
+
+  const handleAddSubtask = () => {
+    if (numSubtasks > 0) {
+      // const arr = subtasks[subtasks.length - 1].id.split("-");
+      // const newAppendix = parseInt(arr[arr.length - 1]) + 1;
+      // const newId = arr.join("-") + `-${newAppendix}`;
+
+      const newId = `${id}-${
+        Math.max(
+          ...Object.keys(subtasks!).map((key) =>
+            parseInt(key.split("-").slice(-1)[0])
+          )
+        ) + 1
+      }`;
+
+      const newSubtask = { title: "", id: newId, completed: 0 };
+
+      set(ref(db, `${dbPath}/subtasks/${newId}`), newSubtask);
+      setNewValue({ ...subtasks, [newId]: newSubtask }, "subtasks");
+    } else {
+      const newId = `${id}-0`;
+      const newSubtask = { title: "", id: newId, completed: 0 };
+
+      set(ref(db, `${dbPath}/subtasks/${newId}`), newSubtask);
+      setNewValue({ [newId]: newSubtask }, "subtasks");
+    }
   };
 
   const menuOptions = [
-    <MenuItem
-      key="0"
-      onClick={() => {
-        if (subtasks != undefined) {
-          const arr = subtasks[subtasks.length - 1].id.split("-");
-          const newAppendix = parseInt(arr[arr.length - 1]) + 1;
-          const newId = arr.join("-") + `-${newAppendix}`;
-          setNewValue(
-            [...subtasks, { title: "", id: newId, completed: 0 }],
-            "subtasks"
-          );
-        } else {
-          setNewValue([{ title: "", id: `${id}-0`, completed: 0 }], "subtasks");
-        }
-      }}
-    >
+    <MenuItem key="0" onClick={handleAddSubtask}>
       Add Subtask
     </MenuItem>,
-    <MenuItem key="1" onClick={() => handleAddField("frequency")}>
-      Add Frequency
-    </MenuItem>,
-    <MenuItem key="2" onClick={() => handleAddField("times")}>
-      Add Repetitions
-    </MenuItem>,
-    <MenuItem key="3" onClick={handleDelete}>
+    <MenuItem key="1" onClick={handleDelete}>
       Delete
     </MenuItem>,
   ];
 
-  if (subtasks && subtasks.length > 1) {
-    menuOptions.push(
-      <MenuItem key="4" onClick={() => handleAddField("required")}>
-        Add Subtask Completions
+  menuOptions.push(
+    item.frequency ? (
+      <MenuItem key="2" onClick={() => setNewValue(null, "frequency")}>
+        Remove Frequency
       </MenuItem>
+    ) : (
+      <MenuItem key="2" onClick={() => handleAddField("frequency")}>
+        Add Frequency
+      </MenuItem>
+    )
+  );
+
+  menuOptions.push(
+    item.times ? (
+      <MenuItem key="3" onClick={() => setNewValue(null, "times")}>
+        Remove Repetitions
+      </MenuItem>
+    ) : (
+      <MenuItem key="3" onClick={() => handleAddField("times")}>
+        Add Repetitions
+      </MenuItem>
+    )
+  );
+
+  if (numSubtasks) {
+    menuOptions.push(
+      item.required ? (
+        <MenuItem key="4" onClick={() => setNewValue(null, "required")}>
+          Remove Required Subtask Completions
+        </MenuItem>
+      ) : (
+        <MenuItem key="4" onClick={() => handleAddField("required")}>
+          Add Required Subtask Completions
+        </MenuItem>
+      )
     );
   }
 
+  const handleEditSubtaskTitle = (value: string, subtaskId: string) => {
+    set(ref(db, `${dbPath}/subtasks/${subtaskId}/title`), value);
+  };
+
+  const handleEditTitle = (value: string) => {
+    set(ref(db, `${dbPath}/title`), value);
+  };
+
+  const subtaskValues = subtasks ? Object.values(subtasks) : [];
+
   const subItems = (isDragging: boolean) => (
     <>
-      {subtasks &&
-        subtasks.length > 0 &&
-        subtasks.map((subtask, index) => (
+      {numSubtasks > 0 &&
+        subtaskValues.map((subtask, index) => (
           <SubItemCard key={subtask.id} isDragging={isDragging}>
             <Row
               after={
-                subtask.completed ? (
-                  <IconButton
-                    onClick={() =>
-                      setNewValue(0, ["subtasks", index, "completed"])
-                    }
-                  >
-                    <IconUndo decorative />
-                  </IconButton>
-                ) : (
-                  <IconButton
-                    onClick={() =>
-                      setNewValue(1, ["subtasks", index, "completed"])
-                    }
-                  >
-                    <IconCheck decorative />
-                  </IconButton>
-                )
+                <>
+                  <Spacing inline right={1}>
+                    <IconButton onClick={() => deleteSubtask(subtask.id)}>
+                      <IconClose decorative />
+                    </IconButton>
+                  </Spacing>
+                  {subtask.completed ? (
+                    <IconButton
+                      onClick={() =>
+                        setNewValue(0, [
+                          id,
+                          "subtasks",
+                          subtask.id,
+                          "completed",
+                        ])
+                      }
+                    >
+                      <IconUndo decorative />
+                    </IconButton>
+                  ) : (
+                    <IconButton
+                      onClick={() =>
+                        setNewValue(1, [
+                          id,
+                          "subtasks",
+                          subtask.id,
+                          "completed",
+                        ])
+                      }
+                    >
+                      <IconCheck decorative />
+                    </IconButton>
+                  )}
+                </>
               }
             >
               <InlineInput
@@ -187,7 +300,9 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
                 completed={subtask.completed}
                 value={subtask.title}
                 callback={setNewValue}
-                callbackProps={["subtasks", index, "title"]}
+                callbackProps={[id, "subtasks", subtask.id, "title"]}
+                callbackOnSubmit={handleEditSubtaskTitle}
+                callbackOnSubmitProps={subtask.id}
               />
             </Row>
           </SubItemCard>
@@ -208,14 +323,16 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
           setNewValue={setNewValue}
         />
       )}
-      {subtasks && subtasks.length > 1 && required && (
+      {subtasks && numSubtasks && required ? (
         <Required
           subtasks={subtasks}
           isDragging={isDragging}
           required={required}
-          numSubtasks={subtasks.length}
+          numSubtasks={numSubtasks}
           setNewValue={setNewValue}
         />
+      ) : (
+        <></>
       )}
     </>
   );
@@ -272,9 +389,14 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
                         </Spacing>
                         {item.times || item.frequency ? (
                           <>
-                            <IconButton onClick={handleUncomplete}>
-                              <IconUndo decorative />
-                            </IconButton>
+                            <Spacing inline right={1}>
+                              <IconButton
+                                disabled={item.completed < 1}
+                                onClick={handleUncomplete}
+                              >
+                                <IconUndo decorative />
+                              </IconButton>
+                            </Spacing>
                             <IconButton onClick={handleComplete}>
                               <IconCheckAlt decorative />
                             </IconButton>
@@ -297,6 +419,7 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
                       value={title}
                       callback={setNewValue}
                       callbackProps={"title"}
+                      callbackOnSubmit={handleEditTitle}
                     />
                   </Row>
                 </Spacing>
