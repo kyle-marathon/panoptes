@@ -9,3 +9,13 @@ export const lastIdState = atom({
   key: "lastId",
   default: 0,
 });
+
+export const pkdState = atom({
+  key: "pkd",
+  default: 0,
+});
+
+export const showPacksState = atom({
+  key: "showPacks",
+  default: false,
+});

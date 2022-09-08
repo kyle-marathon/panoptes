@@ -3,7 +3,7 @@ import { StyleSheet } from "@airbnb/lunar/lib/hooks/useStyles";
 export const styleSheetCard: StyleSheet = ({ color, pattern, ui }) => ({
   card: {
     // ...pattern.box,
-    border: "1px solid rgb(214, 214, 214)",
+    border: "1px solid rgba(214, 214, 214, 0.5)",
     borderRadius: 2,
     background: color.accent.bg,
     overflow: "hidden",

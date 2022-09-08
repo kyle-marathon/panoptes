@@ -3,9 +3,9 @@ import produce from "immer";
 import { Dispatch, memo, SetStateAction } from "react";
 import { Draggable } from "react-beautiful-dnd";
 import { set, update, ref, remove } from "firebase/database";
-import { useRecoilValue } from "recoil";
+import { useRecoilValue, useRecoilState } from "recoil";
 
-import { db } from "../setup/setupFirebase";
+import { db, hasItemsPath } from "../setup/setupFirebase";
 
 import IconButton from "@airbnb/lunar/lib/components/IconButton";
 import MenuToggle, {
@@ -27,11 +27,11 @@ import Times from "./SubItems/Times";
 import SubItemCard from "./SubItems/SubItemCard";
 import InlineInput from "./InlineInput";
 
-import { Item, Items, Subtasks } from "../assets/types";
-import { fieldDefaults } from "../assets/constants";
-import { formatedDate } from "../assets/utils";
+import { Item, Items, Subtasks } from "../utils/types";
+import { fieldDefaults, PKD_KEY } from "../utils/constants";
+import { formatedDate } from "../utils/utils";
 
-import { uidState } from "../atoms";
+import { uidState, pkdState } from "../atoms";
 
 type TaskProps = {
   showDetails: boolean;
@@ -50,6 +50,7 @@ export const taskStyleSheet: StyleSheet = ({ color, font, unit }) => ({
 function Task({ showDetails, index, setItems, item }: TaskProps) {
   const [styles, cx] = useStyles(taskStyleSheet);
   const uid = useRecoilValue(uidState);
+  const [pkd, setPkd] = useRecoilState(pkdState);
 
   const { title, id, completed, subtasks, required, times, frequency } = item;
   const dbPath = `${uid}/tasks/${id}`;
@@ -96,6 +97,10 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
   };
 
   const handleComplete = () => {
+    const newPkd = pkd + 10;
+    setPkd(newPkd);
+    set(ref(db, `${uid}/${PKD_KEY}`), newPkd);
+
     const newData = {
       completed: item.completed ? item.completed + 1 : 1,
       lastCompleted: item.lastCompleted
@@ -118,6 +123,10 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
   };
 
   const handleUncomplete = () => {
+    const newPkd = pkd - 10;
+    setPkd(newPkd);
+    set(ref(db, `${uid}/${PKD_KEY}`), newPkd);
+
     const newData = {
       completed: item.completed ? item.completed - 1 : 0,
       lastCompleted:
@@ -141,6 +150,9 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
 
   const handleDelete = () => {
     setItems((items) => {
+      if (Object.keys(items).length == 1) {
+        set(ref(db, `${uid}/${hasItemsPath}`), false);
+      }
       const {
         [id]: { ...oldItem },
         ...newItems
@@ -151,19 +163,19 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
   };
 
   const deleteSubtask = (subtaskId: string) => {
-    // setItems((items) => {
-    //   const {
-    //     [subtaskId]: { ...oldSubtask },
-    //     ...newSubtasks
-    //   } = items[id].subtasks as Subtasks;
-    //   return {
-    //     ...items,
-    //     [id]: {
-    //       ...items[id],
-    //       subtasks: newSubtasks,
-    //     },
-    //   };
-    // });
+    setItems((items) => {
+      const {
+        [subtaskId]: { ...oldSubtask },
+        ...newSubtasks
+      } = items[id].subtasks as Subtasks;
+      return {
+        ...items,
+        [id]: {
+          ...items[id],
+          subtasks: newSubtasks,
+        },
+      };
+    });
     remove(ref(db, `${dbPath}/subtasks/${subtaskId}`));
   };
 
@@ -266,27 +278,35 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
                   </Spacing>
                   {subtask.completed ? (
                     <IconButton
-                      onClick={() =>
+                      onClick={() => {
+                        const newPkd = pkd - 2;
+                        setPkd(newPkd);
+                        set(ref(db, `${uid}/${PKD_KEY}`), newPkd);
+
                         setNewValue(0, [
                           id,
                           "subtasks",
                           subtask.id,
                           "completed",
-                        ])
-                      }
+                        ]);
+                      }}
                     >
                       <IconUndo decorative />
                     </IconButton>
                   ) : (
                     <IconButton
-                      onClick={() =>
+                      onClick={() => {
+                        const newPkd = pkd + 2;
+                        setPkd(newPkd);
+                        set(ref(db, `${uid}/${PKD_KEY}`), newPkd);
+
                         setNewValue(1, [
                           id,
                           "subtasks",
                           subtask.id,
                           "completed",
-                        ])
-                      }
+                        ]);
+                      }}
                     >
                       <IconCheck decorative />
                     </IconButton>

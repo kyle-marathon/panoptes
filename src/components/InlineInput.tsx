@@ -1,7 +1,7 @@
 import useStyles, { StyleSheet } from "@airbnb/lunar/lib/hooks/useStyles";
 
-import { Item } from "../assets/types";
-import { isItemLive } from "../assets/utils";
+import { Item } from "../utils/types";
+import { isItemLive } from "../utils/utils";
 
 export const taskStyleSheet: StyleSheet = ({ color, font, unit }) => ({
   input: {

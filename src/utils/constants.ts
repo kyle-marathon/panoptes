@@ -7,3 +7,7 @@ export const fieldDefaults: { [key: string]: number } = {
   required: 1,
   times: 2,
 };
+
+export const UID_KEY = "zoa-uid";
+
+export const PKD_KEY = "pkd";

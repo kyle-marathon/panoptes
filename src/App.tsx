@@ -1,4 +1,5 @@
 import useStyles, { StyleSheet } from "@airbnb/lunar/lib/hooks/useStyles";
+import useTheme from "@airbnb/lunar/lib/hooks/useTheme";
 import { DragDropContext, Droppable, DropResult } from "react-beautiful-dnd";
 import { useEffect, useState } from "react";
 import { ref, set, update, onValue } from "firebase/database";
@@ -6,34 +7,44 @@ import "firebaseui/dist/firebaseui.css";
 import { auth } from "./setup/setupFirebase";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { signOut } from "firebase/auth";
-import { useRecoilValue } from "recoil";
+import { useRecoilValue, useRecoilState } from "recoil";
 
-import { db, lastIdPath } from "./setup/setupFirebase";
+import { db, lastIdPath, hasItemsPath } from "./setup/setupFirebase";
 
 import Input from "@airbnb/lunar/lib/components/Input";
-import Row from "@airbnb/lunar/lib/components/Row";
 import Button from "@airbnb/lunar/lib/components/Button";
 import Spacing from "@airbnb/lunar/lib/components/Spacing";
 import Switch from "@airbnb/lunar/lib/components/Switch";
+import Shimmer from "@airbnb/lunar/lib/components/Shimmer";
 import DatePickerInput from "@airbnb/lunar/lib/components/DatePickerInput";
+import IconExpand from "@airbnb/lunar-icons/lib/interface/IconExpand";
 
-import { MOCK_CONFIG } from "./assets/mockData";
 import { MemoizedTask } from "./components/Task";
-import { keyCodes } from "./assets/constants";
-import { Items } from "./assets/types";
+import Team from "./components/Team";
+import Card from "./components/Card";
+import Row from "./components/Row";
+
+import { MOCK_CONFIG } from "./utils/mockData";
+import { keyCodes } from "./utils/constants";
+import { Items } from "./utils/types";
 
 import "./setup/setTheme";
 import "./setup/setupFirebase";
-import { isItemLive } from "./assets/utils";
-import { uidState, lastIdState } from "./atoms";
-import { iteratorSymbol } from "immer/dist/internal";
+import { isItemLive } from "./utils/utils";
+import { uidState, lastIdState, showPacksState } from "./atoms";
+import { UID_KEY } from "./utils/constants";
 
 export const appStyleSheet: StyleSheet = ({ color, font, unit }) => ({
   body: {
-    maxWidth: unit * 80,
+    maxWidth: unit * 62,
+    minWidth: Math.min(window.innerWidth - unit * 8, unit * 62),
   },
   switchWrap: {
-    maxWidth: unit * 80,
+    maxWidth: "100%",
+  },
+  center: {
+    display: "flex",
+    justifyContent: "center",
   },
   testafter: {
     background: "rgb(240, 240, 255)",
@@ -60,12 +71,30 @@ export default function App() {
   const [startDate, setStartDate] = useState<Date>(MOCK_CONFIG.startDate);
   const [endDate, setEndDate] = useState<Date>(MOCK_CONFIG.endDate);
   const [newItem, setNewItem] = useState("");
-  const [styles, cx] = useStyles(appStyleSheet);
   const [showDetails, setShowDetails] = useState<boolean>(true);
   const [showCompleted, setShowCompleted] = useState<boolean>(true);
+
   const [user, loading, error] = useAuthState(auth);
-  const uid = useRecoilValue(uidState);
+
+  const [uid, setUid] = useRecoilState(uidState);
   const lastId = useRecoilValue(lastIdState);
+  const [showPacks, setShowPacks] = useRecoilState(showPacksState);
+  const [hasItems, setHasItems] = useState(true);
+
+  const { unit } = useTheme();
+  const [styles, cx] = useStyles(appStyleSheet);
+
+  useEffect(() => {
+    if (user) {
+      const hasItemsRef = ref(db, `${user.uid}/${hasItemsPath}`);
+      onValue(hasItemsRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          setHasItems(data);
+        }
+      });
+    }
+  }, [user]);
 
   useEffect(() => {
     if (user) {
@@ -97,7 +126,7 @@ export default function App() {
       };
 
       set(ref(db, path), newTask);
-
+      set(ref(db, `${uid}/${hasItemsPath}`), true);
       set(ref(db, `${uid}/${lastIdPath}`), newLastId);
 
       setItems({ [newId]: newTask, ...items });
@@ -121,6 +150,41 @@ export default function App() {
   const sortedItems = filteredItems.sort((a, b) =>
     a.index > b.index ? 1 : -1
   );
+
+  const dummyItems =
+    itemsArr.length == 0 &&
+    hasItems &&
+    new Array(5).fill("").map((x, idx) => (
+      <Row
+        key={idx}
+        compact
+        middleAlign
+        before={
+          <div>
+            <IconExpand accessibilityLabel="drag" />
+          </div>
+        }
+      >
+        <Spacing inner vertical={0.5}>
+          <Card noShadow={true} overflow>
+            <Spacing inner horizontal={2} vertical={1}>
+              <Row middleAlign>
+                <div
+                  className={cx({
+                    opacity: 0.5 - idx / 10,
+                  })}
+                >
+                  <Shimmer
+                    height={10}
+                    width={Math.min(window.innerWidth - unit * 15, unit * 54)}
+                  />
+                </div>
+              </Row>
+            </Spacing>
+          </Card>
+        </Spacing>
+      </Row>
+    ));
 
   const onDragEnd = (result: DropResult) => {
     const { destination, source } = result;
@@ -149,107 +213,116 @@ export default function App() {
       updates[`${uid}/tasks/${item.id}/index`] = index;
     });
 
-    // const updates: UpdateData = {};
-    // Object.entries(newData).forEach(([key, value]) => {
-    //   updates[`${dbPath}/${key}`] = value;
-    // });
-    // const updates = {
-    //   [`${uid}/tasks/task-${newLastId}`]
-    // }
     update(ref(db), updates);
 
     setItems({ ...newItems });
   };
 
   return (
-    <Spacing inner all={3}>
-      <Spacing bottom={1.5}>
-        <Button
-          small
-          inverted
-          onClick={() => {
-            signOut(auth);
-          }}
-        >
-          Logout
-        </Button>
-      </Spacing>
-      <div className={cx(styles.body)}>
-        <Row
-          after={
-            <DatePickerInput
-              small
-              hideLabel
-              label="end"
-              placeholder="End date"
-              onChange={(newDate: string) => setEndDate(new Date(newDate))}
-              value={endDate}
-            />
-          }
-        >
-          <Spacing inline right={2} bottom={1.5}>
-            <DatePickerInput
-              small
-              hideLabel
-              label="start"
-              placeholder="Start date"
-              onChange={(newDate: string) => setStartDate(new Date(newDate))}
-              value={startDate}
-            />
-          </Spacing>
-        </Row>
-        <Input
-          small
-          label="New item"
-          value={newItem}
-          onChange={setNewItem}
-          onKeyDown={handleKeyDown}
-        />
-        <div className={cx(styles.switchWrap)}>
-          <Spacing vertical={1}>
-            <Row
-              before={
-                <Switch
-                  small
-                  checked={showDetails}
-                  label="Show details"
-                  onChange={() => setShowDetails(!showDetails)}
-                />
-              }
-            >
-              <Spacing inline>
-                <Switch
-                  small
-                  checked={showCompleted}
-                  label="Show completed"
-                  onChange={() => setShowCompleted(!showCompleted)}
-                />
-              </Spacing>
-            </Row>
-          </Spacing>
-        </div>
-        <DragDropContext
-          onDragEnd={(results: DropResult) => onDragEnd(results)}
-        >
-          <Droppable droppableId={"droppable-1"}>
-            {(provided) => (
-              <div ref={provided.innerRef} {...provided.droppableProps}>
-                {sortedItems.map((item, index) => (
-                  <MemoizedTask
-                    key={item.id}
-                    showDetails={showDetails}
-                    index={index}
-                    setItems={setItems}
-                    item={item}
+    <div className={cx(styles.center)}>
+      <Spacing inner inline all={3}>
+        <Spacing bottom={1.5}>
+          <Button
+            small
+            inverted
+            onClick={() => {
+              signOut(auth);
+              setUid("");
+              window.localStorage.setItem(UID_KEY, "");
+            }}
+          >
+            Logout
+          </Button>
+        </Spacing>
+        <div className={cx(styles.body)}>
+          <Row
+            after={
+              <DatePickerInput
+                small
+                hideLabel
+                label="end"
+                placeholder="End date"
+                onChange={(newDate: string) => setEndDate(new Date(newDate))}
+                value={endDate}
+              />
+            }
+          >
+            <Spacing inline right={2} bottom={1.5}>
+              <DatePickerInput
+                small
+                hideLabel
+                label="start"
+                placeholder="Start date"
+                onChange={(newDate: string) => setStartDate(new Date(newDate))}
+                value={startDate}
+              />
+            </Spacing>
+          </Row>
+          <Team />
+          <Input
+            small
+            label="New item"
+            value={newItem}
+            onChange={setNewItem}
+            onKeyDown={handleKeyDown}
+          />
+          <div className={cx(styles.switchWrap)}>
+            <Spacing vertical={1}>
+              <Row
+                before={
+                  <Switch
+                    small
+                    checked={!showDetails}
+                    label="Hide details"
+                    onChange={() => setShowDetails(!showDetails)}
                   />
-                ))}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
-      </div>
-    </Spacing>
+                }
+              >
+                <Spacing inline right={2}>
+                  <Switch
+                    small
+                    checked={!showCompleted}
+                    label="Hide completed"
+                    onChange={() => setShowCompleted(!showCompleted)}
+                  />
+                </Spacing>
+                <Spacing inline>
+                  <Switch
+                    small
+                    checked={showPacks}
+                    label="Show packs"
+                    onChange={() => {
+                      setShowPacks((showPacks) => !showPacks);
+                    }}
+                  />
+                </Spacing>
+              </Row>
+            </Spacing>
+          </div>
+          {dummyItems}
+          <DragDropContext
+            onDragEnd={(results: DropResult) => onDragEnd(results)}
+          >
+            <Droppable droppableId={"droppable-1"}>
+              {(provided) => (
+                <div ref={provided.innerRef} {...provided.droppableProps}>
+                  {sortedItems.map((item, index) => (
+                    <MemoizedTask
+                      key={item.id}
+                      showDetails={showDetails}
+                      index={index}
+                      setItems={setItems}
+                      item={item}
+                    />
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
+        </div>
+      </Spacing>
+    </div>
   );
 }
 
@@ -269,31 +342,15 @@ export default function App() {
 // - Pick new end date
 // - Default is based on previous interval
 
-// Completed
-// Add advanced controls to data schema [DONE]
-// Add advanced controls to dropdown menu [DONE]
-// Remove logs [DONE]
-// Remove crazy handleChange/Submit pattern [DONE]
-// Improve code
-// - Subcards could be a single component [DONE]
-// - All task setItems could be one function [DONE]
-// - Clean up Any [DONE]
-// Subtasks can be edited [DONE]
-// Able to add subtasks [DONE]
+// Later
+// Later, introduce battle system
+// Instead of slot machine directly, points get you access to battles
+// By winning battles you get to unlock more stuff
+// Pokemon, moves for the pokemon, new pokemon "packs"
 
-// Able to view completed tasks/subtasks [DONE]
-// Able to complete subtasks [DONE]
-// - UI for completing them [DONE]
-// - Required subtask item updates with progress [DONE]
+// Later, you can battle friends online at the end of each arc
 
-// Can complete/uncomplete repeat and frequency tasks [DONE]
-// Frequency tasks keep history of last completed [DONE]
-// and can undo [DONE]
-
-// For times/frequency/required tasks, task completes once you fulfil goals
-// times[DONE]
-// frequency[DONE]
-// required [DONE]
-// Set sprint end date [DONE]
-
-// Put everything in local storage or firebase [DONE]
+// Not MVP
+// Use hue rotate to custom create "shinys" in browser
+// Hue-rotate(180) + invert = dark pokemon
+// When a new subtask is created set focus to the new subtask input field

@@ -1,35 +1,37 @@
 import { useEffect } from "react";
 
-import { getDatabase, ref, set, onValue } from "firebase/database";
-import firebase from "firebase/compat/app";
+import { ref, onValue } from "firebase/database";
 // import * as firebaseui from "firebaseui";
 import "firebaseui/dist/firebaseui.css";
 import { auth } from "./setup/setupFirebase";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { signOut } from "firebase/auth";
 
 import { db, lastIdPath } from "./setup/setupFirebase";
-import {
-  RecoilRoot,
-  atom,
-  selector,
-  useSetRecoilState,
-  useRecoilValue,
-} from "recoil";
+import { RecoilRoot, useSetRecoilState, useRecoilState } from "recoil";
 
 import Login from "./components/Login";
 import App from "./App";
 
 import { uidState, lastIdState } from "./atoms";
+import { UID_KEY } from "./utils/constants";
 
 export function EntryWithRecoil() {
   const [user, loading, error] = useAuthState(auth);
-  const setUid = useSetRecoilState(uidState);
+  const [uid, setUid] = useRecoilState(uidState);
   const setLastId = useSetRecoilState(lastIdState);
 
   useEffect(() => {
+    const localUid = window.localStorage.getItem(UID_KEY);
+    if (localUid && !uid) {
+      setUid(localUid);
+    }
+  }, []);
+
+  useEffect(() => {
     if (user) {
-      setUid(user.uid);
+      const { uid } = user;
+      setUid(uid);
+      window.localStorage.setItem(UID_KEY, uid);
     }
   }, [user]);
 
@@ -45,13 +47,13 @@ export function EntryWithRecoil() {
     }
   }, [user]);
 
-  if (loading) {
-    return <div>Loading...</div>;
-  } else if (!user) {
-    return <Login />;
+  if (uid) {
+    return <App />;
+  } else if (loading) {
+    return <></>;
   }
 
-  return <App />;
+  return <Login />;
 }
 
 export default function Entry() {

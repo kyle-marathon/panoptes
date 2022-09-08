@@ -74,3 +74,4 @@ export const signInWithGoogle = async () => {
 // };
 
 export const lastIdPath = "lastId";
+export const hasItemsPath = "hasItems";

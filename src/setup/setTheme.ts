@@ -20,6 +20,8 @@ function applyThemeColors() {
   ui.boxShadow = "rgb(48 48 48 / 100%) 0px 4px 16px";
   ui.boxShadowMedium = "rgb(48 48 48 / 100%) 0px 4px 16px";
   ui.boxShadowLarge = "rgb(48 48 48 / 100%) 0px 4px 16px";
+  ui.borderWidth = 2;
+  ui.borderWidthThick = 1;
 
   // color.core.primary = primary;
 

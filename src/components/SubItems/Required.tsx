@@ -6,7 +6,7 @@ import IconButton from "@airbnb/lunar/lib/components/IconButton";
 import IconRemove from "@airbnb/lunar-icons/lib/interface/IconRemove";
 import IconAdd from "@airbnb/lunar-icons/lib/interface/IconAdd";
 
-import { Subtasks } from "../../assets/types";
+import { Subtasks } from "../../utils/types";
 
 type RequiredProps = {
   subtasks: Subtasks;
