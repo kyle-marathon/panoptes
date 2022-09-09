@@ -19,3 +19,8 @@ export const showPacksState = atom({
   key: "showPacks",
   default: false,
 });
+
+export const isOnlineState = atom({
+  key: "isOnline",
+  default: !window.location.href.includes("localhost"),
+});

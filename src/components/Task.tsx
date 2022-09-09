@@ -1,7 +1,9 @@
+import useTheme from "@airbnb/lunar/lib/hooks/useTheme";
+import { useState } from "react";
 import useStyles, { StyleSheet } from "@airbnb/lunar/lib/hooks/useStyles";
 import produce from "immer";
 import { Dispatch, memo, SetStateAction } from "react";
-import { Draggable } from "react-beautiful-dnd";
+import { Draggable, DraggableProvided } from "react-beautiful-dnd";
 import { set, update, ref, remove } from "firebase/database";
 import { useRecoilValue, useRecoilState } from "recoil";
 
@@ -16,6 +18,12 @@ import IconCheck from "@airbnb/lunar-icons/lib/interface/IconCheck";
 import IconClose from "@airbnb/lunar-icons/lib/interface/IconClose";
 import IconCheckAlt from "@airbnb/lunar-icons/lib/interface/IconCheckAlt";
 import IconUndo from "@airbnb/lunar-icons/lib/interface/IconUndo";
+
+import IconAdd from "@airbnb/lunar-icons/lib/interface/IconAdd";
+import IconAssignment from "@airbnb/lunar-icons/lib/general/IconAssignment";
+import IconWatch from "@airbnb/lunar-icons/lib/general/IconWatch";
+import IconFlower from "@airbnb/lunar-icons/lib/general/IconFlower";
+
 import IconMenuDotsVert from "@airbnb/lunar-icons/lib/interface/IconMenuDotsVert";
 import IconExpand from "@airbnb/lunar-icons/lib/interface/IconExpand";
 
@@ -26,8 +34,10 @@ import Required from "./SubItems/Required";
 import Times from "./SubItems/Times";
 import SubItemCard from "./SubItems/SubItemCard";
 import InlineInput from "./InlineInput";
+import Editor from "./Editor";
+import HiddenButtons, { HiddenButton } from "./HiddenButtons";
 
-import { Item, Items, Subtasks } from "../utils/types";
+import { Item, Items, Subtasks, Types } from "../utils/types";
 import { fieldDefaults, PKD_KEY } from "../utils/constants";
 import { formatedDate } from "../utils/utils";
 
@@ -51,6 +61,8 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
   const [styles, cx] = useStyles(taskStyleSheet);
   const uid = useRecoilValue(uidState);
   const [pkd, setPkd] = useRecoilState(pkdState);
+  const [hover, setHover] = useState(false);
+  const { color } = useTheme();
 
   const { title, id, completed, subtasks, required, times, frequency } = item;
   const dbPath = `${uid}/tasks/${id}`;
@@ -207,51 +219,54 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
   };
 
   const menuOptions = [
-    <MenuItem key="0" onClick={handleAddSubtask}>
-      Add Subtask
-    </MenuItem>,
-    <MenuItem key="1" onClick={handleDelete}>
-      Delete
-    </MenuItem>,
+    <HiddenButton key="0" onClick={handleAddSubtask}>
+      <IconAdd decorative />
+    </HiddenButton>,
   ];
+
+  if (numSubtasks) {
+    menuOptions.push(
+      item.required ? (
+        <HiddenButton key="4" onClick={() => setNewValue(null, "required")}>
+          <IconAssignment decorative color={color.core.secondary[6]} />
+        </HiddenButton>
+      ) : (
+        <HiddenButton key="4" onClick={() => handleAddField("required")}>
+          <IconAssignment decorative />
+        </HiddenButton>
+      )
+    );
+  }
 
   menuOptions.push(
     item.frequency ? (
-      <MenuItem key="2" onClick={() => setNewValue(null, "frequency")}>
-        Remove Frequency
-      </MenuItem>
+      <HiddenButton key="2" onClick={() => setNewValue(null, "frequency")}>
+        <IconWatch decorative color={color.core.secondary[6]} />
+      </HiddenButton>
     ) : (
-      <MenuItem key="2" onClick={() => handleAddField("frequency")}>
-        Add Frequency
-      </MenuItem>
+      <HiddenButton key="2" onClick={() => handleAddField("frequency")}>
+        <IconWatch decorative />
+      </HiddenButton>
     )
   );
 
   menuOptions.push(
     item.times ? (
-      <MenuItem key="3" onClick={() => setNewValue(null, "times")}>
-        Remove Repetitions
-      </MenuItem>
+      <HiddenButton key="3" onClick={() => setNewValue(null, "times")}>
+        <IconFlower decorative color={color.core.secondary[6]} />
+      </HiddenButton>
     ) : (
-      <MenuItem key="3" onClick={() => handleAddField("times")}>
-        Add Repetitions
-      </MenuItem>
+      <HiddenButton key="3" onClick={() => handleAddField("times")}>
+        <IconFlower decorative />
+      </HiddenButton>
     )
   );
 
-  if (numSubtasks) {
-    menuOptions.push(
-      item.required ? (
-        <MenuItem key="4" onClick={() => setNewValue(null, "required")}>
-          Remove Required Subtask Completions
-        </MenuItem>
-      ) : (
-        <MenuItem key="4" onClick={() => handleAddField("required")}>
-          Add Required Subtask Completions
-        </MenuItem>
-      )
-    );
-  }
+  menuOptions.push(
+    <HiddenButton key="1" onClick={handleDelete}>
+      <IconClose decorative />
+    </HiddenButton>
+  );
 
   const handleEditSubtaskTitle = (value: string, subtaskId: string) => {
     set(ref(db, `${dbPath}/subtasks/${subtaskId}/title`), value);
@@ -269,6 +284,7 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
         subtaskValues.map((subtask, index) => (
           <SubItemCard key={subtask.id} isDragging={isDragging}>
             <Row
+              middleAlign
               after={
                 <>
                   <Spacing inline right={1}>
@@ -372,80 +388,97 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
     <Draggable draggableId={id} index={index}>
       {(provided, snapshot) => (
         <div {...provided.draggableProps} ref={provided.innerRef}>
-          <Row
-            compact
-            middleAlign
-            before={
-              <div {...provided.dragHandleProps}>
-                <IconExpand accessibilityLabel="drag" />
-              </div>
-            }
-          >
-            <Spacing inner vertical={0.5}>
+          {item.type === Types.Editor ? (
+            <div
+              onMouseOver={() => {
+                setHover(true);
+              }}
+              onMouseOut={() => {
+                setHover(false);
+              }}
+            >
+              <Spacing top={2}>
+                <Editor
+                  hover={hover}
+                  id={id}
+                  content={title}
+                  initialCollapsed={item.collapsed}
+                  initialHideToolbar={item.hideToolbar}
+                />
+              </Spacing>
+            </div>
+          ) : (
+            <Spacing inner top={2}>
               <Card noShadow={!snapshot.isDragging} overflow>
-                <Spacing inner all={1}>
-                  <Row
-                    compact
-                    before={
-                      <div className={cx(styles.flex)}>
-                        <MenuToggle
-                          closeOnClick
-                          accessibilityLabel="Actions"
-                          toggleIcon={<IconMenuDotsVert decorative />}
-                          toggleLabel="Actions"
-                          zIndex={10}
-                          dropdownProps={{
-                            left: 0,
-                          }}
-                        >
-                          {menuOptions}
-                        </MenuToggle>
+                <div
+                  className={cx({ position: "relative" })}
+                  onMouseOver={() => {
+                    setHover(true);
+                  }}
+                  onMouseOut={() => {
+                    setHover(false);
+                  }}
+                >
+                  <HiddenButtons isHidden={!hover}>
+                    <>
+                      <div {...provided.dragHandleProps}>
+                        <HiddenButton onClick={() => {}}>
+                          <IconExpand accessibilityLabel="drag" />
+                        </HiddenButton>
                       </div>
-                    }
-                    after={
-                      <>
-                        <Spacing inline right={1}>
-                          {renews() ?? <></>}
-                        </Spacing>
-                        {item.times || item.frequency ? (
-                          <>
-                            <Spacing inline right={1}>
-                              <IconButton
-                                disabled={item.completed < 1}
-                                onClick={handleUncomplete}
-                              >
-                                <IconUndo decorative />
+                      {menuOptions}
+                    </>
+                  </HiddenButtons>
+                  <Spacing inner vertical={1} horizontal={1.5}>
+                    <Row
+                      compact
+                      middleAlign
+                      after={
+                        <>
+                          <Spacing inline right={1}>
+                            {renews() ?? <></>}
+                          </Spacing>
+                          {item.times || item.frequency ? (
+                            <>
+                              <Spacing inline right={1}>
+                                <IconButton
+                                  disabled={item.completed < 1}
+                                  onClick={handleUncomplete}
+                                >
+                                  <IconUndo decorative />
+                                </IconButton>
+                              </Spacing>
+                              <IconButton onClick={handleComplete}>
+                                <IconCheckAlt decorative />
                               </IconButton>
-                            </Spacing>
+                            </>
+                          ) : item.completed ? (
+                            <IconButton onClick={handleUncomplete}>
+                              <IconUndo decorative />
+                            </IconButton>
+                          ) : (
                             <IconButton onClick={handleComplete}>
                               <IconCheckAlt decorative />
                             </IconButton>
-                          </>
-                        ) : item.completed ? (
-                          <IconButton onClick={handleUncomplete}>
-                            <IconUndo decorative />
-                          </IconButton>
-                        ) : (
-                          <IconButton onClick={handleComplete}>
-                            <IconCheckAlt decorative />
-                          </IconButton>
-                        )}
-                      </>
-                    }
-                  >
-                    <InlineInput
-                      item={item}
-                      completed={completed}
-                      value={title}
-                      callback={setNewValue}
-                      callbackProps={"title"}
-                      callbackOnSubmit={handleEditTitle}
-                    />
-                  </Row>
-                </Spacing>
+                          )}
+                        </>
+                      }
+                    >
+                      <InlineInput
+                        bold
+                        item={item}
+                        completed={completed}
+                        value={title}
+                        callback={setNewValue}
+                        callbackProps={"title"}
+                        callbackOnSubmit={handleEditTitle}
+                      />
+                    </Row>
+                  </Spacing>
+                </div>
               </Card>
             </Spacing>
-          </Row>
+          )}
           {showDetails && subItems(snapshot.isDragging)}
         </div>
       )}
@@ -454,3 +487,20 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
 }
 
 export const MemoizedTask = memo(Task);
+
+{
+  /* <div className={cx(styles.flex)}>
+<MenuToggle
+  closeOnClick
+  accessibilityLabel="Actions"
+  toggleIcon={<IconMenuDotsVert decorative />}
+  toggleLabel="Actions"
+  zIndex={10}
+  dropdownProps={{
+    left: 0,
+  }}
+>
+  {menuOptions}
+</MenuToggle>
+</div> */
+}

@@ -42,3 +42,9 @@ export const formatedDate = (date: Date) => {
     month: "short",
   })} ${date.getDate()}${ending}]`;
 };
+
+export const getBodyWidth = (unit: number) =>
+  Math.min(window.innerWidth - unit * 8, unit * 62);
+
+export const getCardInnerWidth = (unit: number) =>
+  Math.min(window.innerWidth - unit * 15, unit * 54);

@@ -262,18 +262,3 @@ export default function Team() {
     </Spacing>
   );
 }
-
-// MVP
-// Task Points
-// // Frequency tasks: count as subtasks until you've completed the last one of the arc
-// // Repeat tasks: count as subtasks until you've completed them all
-// // Requirement tasks: Once enough subtasks are complete, main task is automatically completed
-
-// Other app features: spaced repetition
-// markdown editor scratchpad
-
-// Store pokemon and pkd in database [DONE]
-// Just stick uid in local storage [DONE]
-// Firebase security [DONE]
-// Loading state [DONE]
-// Breaks if you have 0 pokemon [DONE]

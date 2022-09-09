@@ -31,7 +31,7 @@ export default function Required({
   return (
     <SubItemCard isDragging={isDragging}>
       <Row
-        before={
+        after={
           <>
             <Spacing inner inline right={1}>
               <IconButton

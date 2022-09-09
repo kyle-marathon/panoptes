@@ -1,5 +1,7 @@
 import useStyles, { StyleSheet } from "@airbnb/lunar/lib/hooks/useStyles";
 
+import Spacing from "@airbnb/lunar/lib/components/Spacing";
+
 import { Item } from "../utils/types";
 import { isItemLive } from "../utils/utils";
 
@@ -9,10 +11,15 @@ export const taskStyleSheet: StyleSheet = ({ color, font, unit }) => ({
     width: "100%",
     border: "none",
     textOverflow: "ellipsis",
+    padding: 0,
     ":focus": {
       border: "none",
       outline: "none",
     },
+  },
+
+  input_bold: {
+    fontWeight: "bold",
   },
 
   input_completed: {
@@ -21,14 +28,15 @@ export const taskStyleSheet: StyleSheet = ({ color, font, unit }) => ({
 });
 
 type InlineInputProps = {
-  isSubtask?: boolean;
   item: Item;
-  completed?: number;
   value: string;
   callback: (value: string, props: any) => void;
   callbackOnSubmit: (value: string, props: any) => void;
   callbackProps: any;
+  isSubtask?: boolean;
+  completed?: number;
   callbackOnSubmitProps?: any;
+  bold?: boolean;
 };
 
 export default function InlineInput({
@@ -40,24 +48,34 @@ export default function InlineInput({
   callbackOnSubmit,
   callbackProps,
   callbackOnSubmitProps,
+  bold,
 }: InlineInputProps) {
   const [styles, cx] = useStyles(taskStyleSheet);
 
   return (
-    <input
-      className={cx(
-        styles.input,
-        (!isItemLive(item) || (isSubtask && !!completed)) &&
-          styles.input_completed
-      )}
-      type="text"
-      value={value}
-      onChange={({ target: { value } }: React.ChangeEvent<HTMLInputElement>) =>
-        callback(value, callbackProps)
-      }
-      onBlur={({ target: { value } }: React.ChangeEvent<HTMLInputElement>) =>
-        callbackOnSubmit(value, callbackOnSubmitProps)
-      }
-    />
+    <>
+      <Spacing right={1}>
+        <input
+          className={cx(
+            styles.input,
+            bold && styles.input_bold,
+            (!isItemLive(item) || (isSubtask && !!completed)) &&
+              styles.input_completed
+          )}
+          type="text"
+          value={value}
+          onChange={({
+            target: { value },
+          }: React.ChangeEvent<HTMLInputElement>) =>
+            callback(value, callbackProps)
+          }
+          onBlur={({
+            target: { value },
+          }: React.ChangeEvent<HTMLInputElement>) =>
+            callbackOnSubmit(value, callbackOnSubmitProps)
+          }
+        />
+      </Spacing>
+    </>
   );
 }

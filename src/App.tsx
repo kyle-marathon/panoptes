@@ -11,6 +11,9 @@ import { useRecoilValue, useRecoilState } from "recoil";
 
 import { db, lastIdPath, hasItemsPath } from "./setup/setupFirebase";
 
+import MenuToggle, {
+  Item as MenuItem,
+} from "@airbnb/lunar/lib/components/MenuToggle";
 import Input from "@airbnb/lunar/lib/components/Input";
 import Button from "@airbnb/lunar/lib/components/Button";
 import Spacing from "@airbnb/lunar/lib/components/Spacing";
@@ -24,20 +27,20 @@ import Team from "./components/Team";
 import Card from "./components/Card";
 import Row from "./components/Row";
 
-import { MOCK_CONFIG } from "./utils/mockData";
+import { MOCK_CONFIG, MOCK_ITEMS } from "./utils/mockData";
 import { keyCodes } from "./utils/constants";
-import { Items } from "./utils/types";
+import { Items, Types } from "./utils/types";
 
 import "./setup/setTheme";
 import "./setup/setupFirebase";
-import { isItemLive } from "./utils/utils";
-import { uidState, lastIdState, showPacksState } from "./atoms";
+import { isItemLive, getBodyWidth, getCardInnerWidth } from "./utils/utils";
+import { uidState, lastIdState, showPacksState, isOnlineState } from "./atoms";
 import { UID_KEY } from "./utils/constants";
 
 export const appStyleSheet: StyleSheet = ({ color, font, unit }) => ({
   body: {
-    maxWidth: unit * 62,
-    minWidth: Math.min(window.innerWidth - unit * 8, unit * 62),
+    width: getBodyWidth(unit),
+    marginBottom: unit * 10,
   },
   switchWrap: {
     maxWidth: "100%",
@@ -64,6 +67,13 @@ export const appStyleSheet: StyleSheet = ({ color, font, unit }) => ({
       boxShadow: `rgb(48 48 48 / 100%) 0px 4px 16px !important`,
     },
   },
+  input_wrap: {
+    "@selectors": {
+      "> section  > div > div > div > input": {
+        borderWidth: 1,
+      },
+    },
+  },
 });
 
 export default function App() {
@@ -78,8 +88,10 @@ export default function App() {
 
   const [uid, setUid] = useRecoilState(uidState);
   const lastId = useRecoilValue(lastIdState);
+  const isOnline = useRecoilValue(isOnlineState);
   const [showPacks, setShowPacks] = useRecoilState(showPacksState);
   const [hasItems, setHasItems] = useState(true);
+  const [itemType, setItemType] = useState<string>(Types.Task);
 
   const { unit } = useTheme();
   const [styles, cx] = useStyles(appStyleSheet);
@@ -97,7 +109,9 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
-    if (user) {
+    if (!isOnline) {
+      setItems(MOCK_ITEMS.FhIIpYHfumVyad0TJ67rSh0ZOMJ3.tasks);
+    } else if (user) {
       const tasksRef = ref(db, `${user.uid}/tasks`);
       onValue(tasksRef, (snapshot) => {
         const data = snapshot.val();
@@ -117,12 +131,14 @@ export default function App() {
         (acc, item) => (item.index < acc ? item.index : acc),
         0
       );
+
       const newTask = {
         title: newItem,
         id: newId,
         completed: 0,
         subtasks: {},
         index: smallestIndex - 1,
+        type: itemType,
       };
 
       set(ref(db, path), newTask);
@@ -174,10 +190,7 @@ export default function App() {
                     opacity: 0.5 - idx / 10,
                   })}
                 >
-                  <Shimmer
-                    height={10}
-                    width={Math.min(window.innerWidth - unit * 15, unit * 54)}
-                  />
+                  <Shimmer height={10} width={getCardInnerWidth(unit)} />
                 </div>
               </Row>
             </Spacing>
@@ -217,6 +230,22 @@ export default function App() {
 
     setItems({ ...newItems });
   };
+
+  const typeMenuItems: JSX.Element[] = [];
+  Object.values(Types).forEach((value) => {
+    if (typeof value == "string") {
+      typeMenuItems.push(
+        <MenuItem
+          key={value}
+          onClick={() => {
+            setItemType(value);
+          }}
+        >
+          {value}
+        </MenuItem>
+      );
+    }
+  });
 
   return (
     <div className={cx(styles.center)}>
@@ -259,13 +288,6 @@ export default function App() {
             </Spacing>
           </Row>
           <Team />
-          <Input
-            small
-            label="New item"
-            value={newItem}
-            onChange={setNewItem}
-            onKeyDown={handleKeyDown}
-          />
           <div className={cx(styles.switchWrap)}>
             <Spacing vertical={1}>
               <Row
@@ -299,6 +321,34 @@ export default function App() {
               </Row>
             </Spacing>
           </div>
+          <Spacing bottom={1} top={1.5}>
+            <Row
+              middleAlign
+              after={
+                <MenuToggle
+                  closeOnClick
+                  small
+                  inverted
+                  accessibilityLabel="Actions"
+                  toggleLabel={itemType}
+                  zIndex={10}
+                >
+                  {typeMenuItems}
+                </MenuToggle>
+              }
+            >
+              <div className={cx(styles.input_wrap)}>
+                <Input
+                  small
+                  hideLabel
+                  label="New item"
+                  value={newItem}
+                  onChange={setNewItem}
+                  onKeyDown={handleKeyDown}
+                />
+              </div>
+            </Row>
+          </Spacing>
           {dummyItems}
           <DragDropContext
             onDragEnd={(results: DropResult) => onDragEnd(results)}
@@ -325,32 +375,3 @@ export default function App() {
     </div>
   );
 }
-
-// Not MVP
-// Substacks can be reordered
-// Little graphs showing progress
-// Graphic showing progress in sprint
-// - Show progress relativel to progress in sprint
-// Sprints have cool names? Could auto increment, or be pokemon or something
-// Don't renew tasks past sprint end date
-// Create new item input should be separate component
-// What happens at the end of a sprint?
-// - Review and catalogue results
-// - Opion to carry over tasks
-// - - Or even mark tasks as always getting carried over?
-// - Set start date to previous end date
-// - Pick new end date
-// - Default is based on previous interval
-
-// Later
-// Later, introduce battle system
-// Instead of slot machine directly, points get you access to battles
-// By winning battles you get to unlock more stuff
-// Pokemon, moves for the pokemon, new pokemon "packs"
-
-// Later, you can battle friends online at the end of each arc
-
-// Not MVP
-// Use hue rotate to custom create "shinys" in browser
-// Hue-rotate(180) + invert = dark pokemon
-// When a new subtask is created set focus to the new subtask input field
