@@ -56,6 +56,7 @@ export default function InlineInput({
     <>
       <Spacing right={1}>
         <input
+          autoFocus={isSubtask}
           className={cx(
             styles.input,
             bold && styles.input_bold,

@@ -7,6 +7,9 @@ npm start
 npm run deploy
 ```
 
+To use mock data (for slightly faster development), set the isOnlineState atom.
+Warning: this will mess up the database if you submit data
+
 Nice to have features
 
 - Substacks can be reordered
@@ -89,11 +92,28 @@ New Features
 - - - When I wake up in the morning, I complete Japanese flash cards
 - - "Completion" is based on whether or not you actually subsequently complete the task
 
-Todo
+Not required
+
+- Don't write to db when offline
+
+  Todo
 
 - Move task menu into buttons that appear on hover [DONE]
 - Reordering icons only appear on hover [DONE]
-- When a new subtask is created set focus to the new subtask input field
+- When a new subtask is created set focus to the new subtask input field [DONE]
+- New item input field should match style of new items [DONE]
+- Remove editor toolbar border [DONE]
+- Loading screen never ends if tasks is empty [DONE]
+- Editor can be dragged and dropped [DONE]
+- Editor mysterious adds new lines [DONE]
+- Dragging editors is weird [DONE]
+- When created, editor bolds first line [DONE]
+- Editors can be deleted [DONE]
+- Editor <> Task conversion [DONE]
+
 - Subtasks can be text editors
-- Editors can be archived/deleted
-- - E.g. You're using an editor as a subtask to track run times
+
+- Interactions between Required/Times/Frequency
+- - If subitems are completed, main task should be marked complete
+- - Then main task cannot be marked "uncompleted"
+- - In general, main task cannot be marked complete or incomplete if it has the requirements field

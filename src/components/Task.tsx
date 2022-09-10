@@ -18,6 +18,7 @@ import IconCheck from "@airbnb/lunar-icons/lib/interface/IconCheck";
 import IconClose from "@airbnb/lunar-icons/lib/interface/IconClose";
 import IconCheckAlt from "@airbnb/lunar-icons/lib/interface/IconCheckAlt";
 import IconUndo from "@airbnb/lunar-icons/lib/interface/IconUndo";
+import IconNotes from "@airbnb/lunar-icons/lib/general/IconNotes";
 
 import IconAdd from "@airbnb/lunar-icons/lib/interface/IconAdd";
 import IconAssignment from "@airbnb/lunar-icons/lib/general/IconAssignment";
@@ -191,47 +192,52 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
     remove(ref(db, `${dbPath}/subtasks/${subtaskId}`));
   };
 
-  const handleAddSubtask = () => {
-    if (numSubtasks > 0) {
-      // const arr = subtasks[subtasks.length - 1].id.split("-");
-      // const newAppendix = parseInt(arr[arr.length - 1]) + 1;
-      // const newId = arr.join("-") + `-${newAppendix}`;
+  const handleAddSubtask = (isEditor: boolean) => {
+    const newId =
+      numSubtasks > 0
+        ? `${id}-${
+            Math.max(
+              ...Object.keys(subtasks!).map((key) =>
+                parseInt(key.split("-").slice(-1)[0])
+              )
+            ) + 1
+          }`
+        : `${id}-0`;
+    const newSubtask = { title: "", id: newId, completed: 0, isEditor };
 
-      const newId = `${id}-${
-        Math.max(
-          ...Object.keys(subtasks!).map((key) =>
-            parseInt(key.split("-").slice(-1)[0])
-          )
-        ) + 1
-      }`;
-
-      const newSubtask = { title: "", id: newId, completed: 0 };
-
-      set(ref(db, `${dbPath}/subtasks/${newId}`), newSubtask);
-      setNewValue({ ...subtasks, [newId]: newSubtask }, "subtasks");
-    } else {
-      const newId = `${id}-0`;
-      const newSubtask = { title: "", id: newId, completed: 0 };
-
-      set(ref(db, `${dbPath}/subtasks/${newId}`), newSubtask);
-      setNewValue({ [newId]: newSubtask }, "subtasks");
-    }
+    set(ref(db, `${dbPath}/subtasks/${newId}`), newSubtask);
+    // setNewValue({ [newId]: newSubtask }, "subtasks");
+    setNewValue({ ...subtasks, [newId]: newSubtask }, "subtasks");
   };
 
   const menuOptions = [
-    <HiddenButton key="0" onClick={handleAddSubtask}>
+    <HiddenButton key="0" onClick={() => handleAddSubtask(false)}>
       <IconAdd decorative />
+    </HiddenButton>,
+    <HiddenButton
+      key="1"
+      onClick={() => {
+        const updates: UpdateData = {};
+        if (item.type != Types.Editor) {
+          updates[`${dbPath}/title`] = `<b>${item.title}</b>`;
+        }
+        updates[`${dbPath}/type`] =
+          item.type == Types.Editor ? Types.Task : Types.Editor;
+        update(ref(db), updates);
+      }}
+    >
+      <IconNotes decorative />
     </HiddenButton>,
   ];
 
   if (numSubtasks) {
     menuOptions.push(
       item.required ? (
-        <HiddenButton key="4" onClick={() => setNewValue(null, "required")}>
+        <HiddenButton key="2" onClick={() => setNewValue(null, "required")}>
           <IconAssignment decorative color={color.core.secondary[6]} />
         </HiddenButton>
       ) : (
-        <HiddenButton key="4" onClick={() => handleAddField("required")}>
+        <HiddenButton key="2" onClick={() => handleAddField("required")}>
           <IconAssignment decorative />
         </HiddenButton>
       )
@@ -240,11 +246,11 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
 
   menuOptions.push(
     item.frequency ? (
-      <HiddenButton key="2" onClick={() => setNewValue(null, "frequency")}>
+      <HiddenButton key="3" onClick={() => setNewValue(null, "frequency")}>
         <IconWatch decorative color={color.core.secondary[6]} />
       </HiddenButton>
     ) : (
-      <HiddenButton key="2" onClick={() => handleAddField("frequency")}>
+      <HiddenButton key="3" onClick={() => handleAddField("frequency")}>
         <IconWatch decorative />
       </HiddenButton>
     )
@@ -252,18 +258,18 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
 
   menuOptions.push(
     item.times ? (
-      <HiddenButton key="3" onClick={() => setNewValue(null, "times")}>
+      <HiddenButton key="4" onClick={() => setNewValue(null, "times")}>
         <IconFlower decorative color={color.core.secondary[6]} />
       </HiddenButton>
     ) : (
-      <HiddenButton key="3" onClick={() => handleAddField("times")}>
+      <HiddenButton key="4" onClick={() => handleAddField("times")}>
         <IconFlower decorative />
       </HiddenButton>
     )
   );
 
   menuOptions.push(
-    <HiddenButton key="1" onClick={handleDelete}>
+    <HiddenButton key="5" onClick={handleDelete}>
       <IconClose decorative />
     </HiddenButton>
   );
@@ -281,7 +287,7 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
   const subItems = (isDragging: boolean) => (
     <>
       {numSubtasks > 0 &&
-        subtaskValues.map((subtask, index) => (
+        subtaskValues.reverse().map((subtask, index) => (
           <SubItemCard key={subtask.id} isDragging={isDragging}>
             <Row
               middleAlign
@@ -388,82 +394,78 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
     <Draggable draggableId={id} index={index}>
       {(provided, snapshot) => (
         <div {...provided.draggableProps} ref={provided.innerRef}>
-          {item.type === Types.Editor ? (
-            <div
-              onMouseOver={() => {
-                setHover(true);
-              }}
-              onMouseOut={() => {
-                setHover(false);
-              }}
-            >
-              <Spacing top={2}>
-                <Editor
-                  hover={hover}
-                  id={id}
-                  content={title}
-                  initialCollapsed={item.collapsed}
-                  initialHideToolbar={item.hideToolbar}
-                />
-              </Spacing>
-            </div>
-          ) : (
-            <Spacing inner top={2}>
-              <Card noShadow={!snapshot.isDragging} overflow>
-                <div
-                  className={cx({ position: "relative" })}
-                  onMouseOver={() => {
-                    setHover(true);
-                  }}
-                  onMouseOut={() => {
-                    setHover(false);
-                  }}
-                >
-                  <HiddenButtons isHidden={!hover}>
-                    <>
-                      <div {...provided.dragHandleProps}>
-                        <HiddenButton onClick={() => {}}>
-                          <IconExpand accessibilityLabel="drag" />
-                        </HiddenButton>
-                      </div>
-                      {menuOptions}
-                    </>
-                  </HiddenButtons>
-                  <Spacing inner vertical={1} horizontal={1.5}>
-                    <Row
-                      compact
-                      middleAlign
-                      after={
-                        <>
-                          <Spacing inline right={1}>
-                            {renews() ?? <></>}
-                          </Spacing>
-                          {item.times || item.frequency ? (
-                            <>
-                              <Spacing inline right={1}>
-                                <IconButton
-                                  disabled={item.completed < 1}
-                                  onClick={handleUncomplete}
-                                >
-                                  <IconUndo decorative />
-                                </IconButton>
-                              </Spacing>
-                              <IconButton onClick={handleComplete}>
-                                <IconCheckAlt decorative />
+          <Spacing inner top={2}>
+            <Card noShadow={!snapshot.isDragging} overflow>
+              <div
+                className={cx({ position: "relative" })}
+                onMouseOver={() => {
+                  setHover(true);
+                }}
+                onMouseOut={() => {
+                  setHover(false);
+                }}
+              >
+                <HiddenButtons isHidden={!hover}>
+                  <>
+                    <div {...provided.dragHandleProps}>
+                      <HiddenButton onClick={() => {}}>
+                        <IconExpand accessibilityLabel="drag" />
+                      </HiddenButton>
+                    </div>
+                    {menuOptions}
+                  </>
+                </HiddenButtons>
+                <Spacing inner vertical={1} horizontal={1.5}>
+                  <Row
+                    compact
+                    middleAlign
+                    after={
+                      <>
+                        <Spacing inline right={1}>
+                          {renews() ?? <></>}
+                        </Spacing>
+                        {item.times || item.frequency ? (
+                          <>
+                            <Spacing inline right={1}>
+                              <IconButton
+                                disabled={item.completed < 1}
+                                onClick={handleUncomplete}
+                              >
+                                <IconUndo decorative />
                               </IconButton>
-                            </>
-                          ) : item.completed ? (
-                            <IconButton onClick={handleUncomplete}>
-                              <IconUndo decorative />
-                            </IconButton>
-                          ) : (
+                            </Spacing>
                             <IconButton onClick={handleComplete}>
                               <IconCheckAlt decorative />
                             </IconButton>
-                          )}
-                        </>
-                      }
-                    >
+                          </>
+                        ) : item.completed ? (
+                          <IconButton onClick={handleUncomplete}>
+                            <IconUndo decorative />
+                          </IconButton>
+                        ) : (
+                          <IconButton onClick={handleComplete}>
+                            <IconCheckAlt decorative />
+                          </IconButton>
+                        )}
+                      </>
+                    }
+                  >
+                    {item.type === Types.Editor ? (
+                      <Editor
+                        hover={hover}
+                        id={id}
+                        content={title}
+                        initialCollapsed={item.collapsed}
+                        initialHideToolbar={item.hideToolbar}
+                        extraHiddenButtons={
+                          <div {...provided.dragHandleProps}>
+                            <HiddenButton onClick={() => {}}>
+                              <IconExpand accessibilityLabel="drag" />
+                            </HiddenButton>
+                          </div>
+                        }
+                      />
+                    ) : (
                       <InlineInput
                         bold
                         item={item}
@@ -473,12 +475,12 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
                         callbackProps={"title"}
                         callbackOnSubmit={handleEditTitle}
                       />
-                    </Row>
-                  </Spacing>
-                </div>
-              </Card>
-            </Spacing>
-          )}
+                    )}
+                  </Row>
+                </Spacing>
+              </div>
+            </Card>
+          </Spacing>
           {showDetails && subItems(snapshot.isDragging)}
         </div>
       )}

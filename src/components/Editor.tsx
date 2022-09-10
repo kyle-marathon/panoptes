@@ -19,49 +19,64 @@ import { uidState } from "../atoms";
 
 import HiddenButtons, { HiddenButton } from "./HiddenButtons";
 
-export const editorStyleSheet: StyleSheet = ({ color, ui }) => ({
-  editor_content_wrap: {},
-  editor_wrap_hide_toolbar: {
-    "@selectors": {
-      "> span > .editor > .ql-toolbar": {
+export const editorStyleSheet: any = ({ color, ui }: any) => {
+  const stylesObj: any = {
+    editor_content_wrap: {},
+    editor_wrap_hide_toolbar: {
+      "@selectors": {
+        "> span > .editor > .ql-toolbar": {
+          display: "none",
+        },
+      },
+    },
+    editor_wrap_max_height: {
+      display: "block",
+      maxHeight: 40,
+      overflow: "scroll",
+      "::-webkit-scrollbar": {
         display: "none",
       },
     },
-  },
-  editor_wrap_max_height: {
-    display: "block",
-    maxHeight: 40,
-    overflow: "scroll",
-    "::-webkit-scrollbar": {
-      display: "none",
-    },
-  },
-  editor_wrap: {
-    position: "relative",
-    background: "white",
-    border: `1px solid ${toRGBA(color.accent.border, 50)}`,
-    borderRadius: ui.borderRadius,
-    "@selectors": {
-      "> span > .editor > .ql-container": {
-        width: "100%",
-        border: "none",
-        fontSize: 15,
-      },
+    editor_wrap: {
+      position: "relative",
+      // background: "white",
+      // border: `1px solid ${toRGBA(color.accent.border, 50)}`,
+      // borderRadius: ui.borderRadius,
+      "@selectors": {
+        "> span > .editor > .ql-toolbar": {
+          border: "none",
+          borderBottom: `1px solid ${toRGBA(color.accent.border, 50)}`,
+        },
+        "> span > .editor > .ql-container": {
+          width: "100%",
+          border: "none",
+          fontSize: 15,
+        },
 
-      "> span > .editor  > .ql-container > .ql-editor": {
-        padding: "8px 12px 8px 12px",
-      },
+        "> span > .editor  > .ql-container > .ql-editor": {
+          // padding: "8px 12px 8px 12px",
+          padding: 0,
+        },
 
-      "> span > .editor  > .ql-container > .ql-editor > ul": {
-        paddingLeft: "0em",
-      },
+        "> span > .editor  > .ql-container > .ql-editor > ul": {
+          paddingLeft: "0em",
+        },
 
-      "> span > .editor > .ql-container > .ql-editor > ul > li:before": {
-        paddingRight: "0.5em",
+        "> span > .editor > .ql-container > .ql-editor > ul > li:before": {
+          paddingRight: "0.5em",
+        },
       },
     },
-  },
-});
+  };
+
+  [1, 2, 3, 4, 5, 6, 7, 8].forEach((x) => {
+    stylesObj.editor_wrap["@selectors"][
+      `> span > .editor  > .ql-container > .ql-editor > ul > li.ql-indent-${x}`
+    ] = { paddingLeft: `${1.5 * (x + 1)}em` };
+  });
+
+  return stylesObj;
+};
 
 type EditorProps = {
   hover: boolean;
@@ -69,6 +84,7 @@ type EditorProps = {
   content: string;
   initialCollapsed?: boolean;
   initialHideToolbar?: boolean;
+  extraHiddenButtons: JSX.Element;
 };
 
 export default function Editor({
@@ -77,11 +93,12 @@ export default function Editor({
   content,
   initialCollapsed,
   initialHideToolbar,
+  extraHiddenButtons,
 }: EditorProps) {
   const [value, setValue] = useState(content);
   const [styles, cx] = useStyles(editorStyleSheet);
   const [focus, setFocus] = useState(false);
-  const [collapsed, setCollapsed] = useState(initialCollapsed ?? true);
+  const [collapsed, setCollapsed] = useState(initialCollapsed ?? false);
   const [hideToolbar, setHideToolbar] = useState(initialHideToolbar);
   const { color } = useTheme();
 
@@ -94,8 +111,9 @@ export default function Editor({
         !hideToolbar && styles.editor_wrap_hide_toolbar
       )}
     >
-      <HiddenButtons isHidden={!hover && !focus}>
+      {/* <HiddenButtons isHidden={!hover && !focus}>
         <>
+          {extraHiddenButtons}
           <HiddenButton
             onClick={() => {
               set(ref(db, `${uid}/tasks/${id}/hideToolbar`), !hideToolbar);
@@ -122,7 +140,7 @@ export default function Editor({
             )}
           </HiddenButton>
         </>
-      </HiddenButtons>
+      </HiddenButtons> */}
       <span className={cx(collapsed && styles.editor_wrap_max_height)}>
         <ReactQuill
           onFocus={() => setFocus(true)}
@@ -130,6 +148,11 @@ export default function Editor({
           className="editor"
           theme="snow"
           value={value}
+          modules={{
+            clipboard: {
+              matchVisual: false,
+            },
+          }}
           onChange={(value) => {
             set(ref(db, `${uid}/tasks/${id}/title`), value);
             setValue(value);

@@ -68,8 +68,11 @@ export const appStyleSheet: StyleSheet = ({ color, font, unit }) => ({
     },
   },
   input_wrap: {
+    fontWeight: "bold",
     "@selectors": {
       "> section  > div > div > div > input": {
+        fontSize: 15,
+        padding: "8px 12px 8px 12px",
         borderWidth: 1,
       },
     },
@@ -101,9 +104,7 @@ export default function App() {
       const hasItemsRef = ref(db, `${user.uid}/${hasItemsPath}`);
       onValue(hasItemsRef, (snapshot) => {
         const data = snapshot.val();
-        if (data) {
-          setHasItems(data);
-        }
+        setHasItems(data);
       });
     }
   }, [user]);
@@ -133,7 +134,7 @@ export default function App() {
       );
 
       const newTask = {
-        title: newItem,
+        title: itemType == Types.Task ? newItem : `<b>${newItem}</b>`,
         id: newId,
         completed: 0,
         subtasks: {},
@@ -171,17 +172,8 @@ export default function App() {
     itemsArr.length == 0 &&
     hasItems &&
     new Array(5).fill("").map((x, idx) => (
-      <Row
-        key={idx}
-        compact
-        middleAlign
-        before={
-          <div>
-            <IconExpand accessibilityLabel="drag" />
-          </div>
-        }
-      >
-        <Spacing inner vertical={0.5}>
+      <Row key={idx} compact middleAlign>
+        <Spacing inner top={2}>
           <Card noShadow={true} overflow>
             <Spacing inner horizontal={2} vertical={1}>
               <Row middleAlign>
@@ -321,13 +313,12 @@ export default function App() {
               </Row>
             </Spacing>
           </div>
-          <Spacing bottom={1} top={1.5}>
+          <Spacing top={1.5}>
             <Row
               middleAlign
               after={
                 <MenuToggle
                   closeOnClick
-                  small
                   inverted
                   accessibilityLabel="Actions"
                   toggleLabel={itemType}
