@@ -124,6 +124,8 @@ export default function Team() {
 
   const dbPath = `${uid}/mons`;
 
+  console.log(pkd);
+
   useEffect(() => {
     get(ref(db, dbPath)).then((snapshot) => {
       if (snapshot.exists()) {

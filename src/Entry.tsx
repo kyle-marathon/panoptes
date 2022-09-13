@@ -12,12 +12,14 @@ import { RecoilRoot, useSetRecoilState, useRecoilState } from "recoil";
 import Login from "./components/Login";
 import App from "./App";
 
-import { uidState, lastIdState } from "./atoms";
+import { uidState, lastIdState, pkdState } from "./atoms";
 import { UID_KEY } from "./utils/constants";
 
 export function EntryWithRecoil() {
   const [user, loading, error] = useAuthState(auth);
   const [uid, setUid] = useRecoilState(uidState);
+  const [pkd, setPkd] = useRecoilState(pkdState);
+
   const setLastId = useSetRecoilState(lastIdState);
 
   useEffect(() => {
@@ -26,6 +28,18 @@ export function EntryWithRecoil() {
       setUid(localUid);
     }
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      const idRef = ref(db, `${user.uid}/pkd`);
+      onValue(idRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          setPkd(data);
+        }
+      });
+    }
+  }, [user]);
 
   useEffect(() => {
     if (user) {
