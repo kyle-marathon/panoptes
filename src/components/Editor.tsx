@@ -40,9 +40,6 @@ export const editorStyleSheet: any = ({ color, unit }: any) => {
     editor_wrap: {
       width: "100%",
       position: "relative",
-      // background: "white",
-      // border: `1px solid ${toRGBA(color.accent.border, 50)}`,
-      // borderRadius: ui.borderRadius,
       "@selectors": {
         "> span > .editor > .ql-toolbar": {
           border: "none",
@@ -58,7 +55,6 @@ export const editorStyleSheet: any = ({ color, unit }: any) => {
         },
 
         "> span > .editor  > .ql-container > .ql-editor": {
-          // padding: "8px 12px 8px 12px",
           padding: 0,
         },
 
@@ -67,7 +63,7 @@ export const editorStyleSheet: any = ({ color, unit }: any) => {
         },
 
         "> span > .editor > .ql-container > .ql-editor > ul > li:before": {
-          paddingRight: "0.5em",
+          paddingRight: "0.25em",
         },
       },
     },

@@ -38,7 +38,7 @@ export default function Times({
   );
 
   return (
-    <SubItemCard isDragging={isDragging}>
+    <SubItemCard italic isDragging={isDragging}>
       <Row after={beforeContent}>
         Completed {completed} out of {times} times.
       </Row>

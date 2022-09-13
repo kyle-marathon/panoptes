@@ -57,10 +57,6 @@ export default function SubItems({
   const { id, completed, subtasks, required, times, frequency } = item;
   const subtaskValues = subtasks ? Object.values(subtasks) : [];
 
-  if (numSubtasks <= 0) {
-    return <div></div>;
-  }
-
   const frequencyBlock = frequency && (
     <Frequency
       completed={completed}
@@ -91,8 +87,6 @@ export default function SubItems({
     ) : (
       <></>
     );
-
-  console.log(item.title, frequencyBlock);
 
   const subtaskBlocks = subtaskValues.reverse().map((subtask, index) => {
     const { title, collapsed, hideToolbar } = subtask;
@@ -166,7 +160,8 @@ export default function SubItems({
             </>
           }
         >
-          <Editor
+          {subtask.title}
+          {/* <Editor
             id={id}
             content={title}
             collapsed={collapsed}
@@ -186,7 +181,7 @@ export default function SubItems({
                 </HiddenButton>
               </div>
             }
-          />
+          /> */}
         </Row>
       </SubItemCard>
     );

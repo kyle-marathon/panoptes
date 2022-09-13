@@ -14,7 +14,6 @@ import { db, hasItemsPath } from "../setup/setupFirebase";
 
 import IconButton from "@airbnb/lunar/lib/components/IconButton";
 import Spacing from "@airbnb/lunar/lib/components/Spacing";
-import IconCheck from "@airbnb/lunar-icons/lib/interface/IconCheck";
 import IconClose from "@airbnb/lunar-icons/lib/interface/IconClose";
 import IconCheckAlt from "@airbnb/lunar-icons/lib/interface/IconCheckAlt";
 import IconUndo from "@airbnb/lunar-icons/lib/interface/IconUndo";
@@ -30,12 +29,6 @@ import IconExpand from "@airbnb/lunar-icons/lib/interface/IconExpand";
 
 import SubItems from "./SubItems";
 import Card from "./Card";
-import Row from "./Row";
-import Frequency from "./SubItems/Frequency";
-import Required from "./SubItems/Required";
-import Times from "./SubItems/Times";
-import SubItemCard from "./SubItems/SubItemCard";
-import InlineInput from "./InlineInput";
 import Editor from "./Editor";
 import HiddenButtons, { HiddenButton } from "./HiddenButtons";
 
@@ -72,6 +65,8 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
 
   const { title, id, completed, subtasks, required, times, frequency } = item;
   const dbPath = `${uid}/tasks/${id}`;
+
+  const subtaskValues = Object.values(subtasks || {});
   const numSubtasks = subtasks ? Object.keys(subtasks).length : 0;
 
   const setNewValue = (newValue: any, field: string | (string | number)[]) => {

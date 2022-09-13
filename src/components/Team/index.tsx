@@ -44,7 +44,7 @@ const packIndices = [
   [
     [0, 10],
     [7, 5],
-    [7, 13],
+    [7, 15],
     [13, 12],
     [26, 16],
     [16, 10],
@@ -293,7 +293,7 @@ export default function Team() {
       </Spacing>
       <Text inline>
         {pkd}
-        {pkd != 0 && ",000"}
+        {pkd > 0 && ",000"}
         {packPreview >= 0 ? (
           <div
             className={cx({ color: "red", display: "inline" })}
