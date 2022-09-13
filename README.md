@@ -24,6 +24,7 @@ Nice to have features
 Performance
 
 - New Item Input forces all of App to reload when you type
+- Each subtask could be memoized
 
 Battle System
 
@@ -110,10 +111,19 @@ Not required
 - When created, editor bolds first line [DONE]
 - Editors can be deleted [DONE]
 - Editor <> Task conversion [DONE]
+- Interactions between tasks and subtasks in Required [DONE]
+- - If subitems are completed, main task should be marked complete [DONE]
+- - Then main task cannot be marked "uncompleted" [DONE]
+- - In general, main task cannot be marked complete or incomplete if it has the requirements field [DONE]
 
-- Subtasks can be text editors
+- The real distinction is that Editors can't be completed [DONE]
+- - So all inputs should be Editors [DONE]
+- - But then Editors should really be called "notes" and they just don't have completion icons [DONE]
+- Add Editor collapse button
+- - Buttons colored when activate [DONE]
+- - Toolbar hidden when collapsed [DONE]
 
-- Interactions between Required/Times/Frequency
-- - If subitems are completed, main task should be marked complete
-- - Then main task cannot be marked "uncompleted"
-- - In general, main task cannot be marked complete or incomplete if it has the requirements field
+- Subtasks are also editors
+- - Subtask notes don't have icons and don't get counted for Required
+- Subtask delete icon as hidden button
+- Frequency/times/required +/- buttons as hidden buttons

@@ -19,7 +19,7 @@ import { uidState } from "../atoms";
 
 import HiddenButtons, { HiddenButton } from "./HiddenButtons";
 
-export const editorStyleSheet: any = ({ color, ui }: any) => {
+export const editorStyleSheet: any = ({ color, unit }: any) => {
   const stylesObj: any = {
     editor_content_wrap: {},
     editor_wrap_hide_toolbar: {
@@ -31,13 +31,14 @@ export const editorStyleSheet: any = ({ color, ui }: any) => {
     },
     editor_wrap_max_height: {
       display: "block",
-      maxHeight: 40,
+      maxHeight: 24,
       overflow: "scroll",
       "::-webkit-scrollbar": {
         display: "none",
       },
     },
     editor_wrap: {
+      width: "100%",
       position: "relative",
       // background: "white",
       // border: `1px solid ${toRGBA(color.accent.border, 50)}`,
@@ -46,6 +47,9 @@ export const editorStyleSheet: any = ({ color, ui }: any) => {
         "> span > .editor > .ql-toolbar": {
           border: "none",
           borderBottom: `1px solid ${toRGBA(color.accent.border, 50)}`,
+          marginBottom: unit,
+          marginLeft: -1.5 * unit,
+          paddingTop: 0,
         },
         "> span > .editor > .ql-container": {
           width: "100%",
@@ -79,28 +83,25 @@ export const editorStyleSheet: any = ({ color, ui }: any) => {
 };
 
 type EditorProps = {
-  hover: boolean;
   id: string;
   content: string;
-  initialCollapsed?: boolean;
-  initialHideToolbar?: boolean;
+  collapsed?: boolean;
+  hideToolbar?: boolean;
   extraHiddenButtons: JSX.Element;
+  onFocus: () => void;
+  onBlur: () => void;
 };
 
 export default function Editor({
-  hover,
   id,
   content,
-  initialCollapsed,
-  initialHideToolbar,
-  extraHiddenButtons,
+  collapsed,
+  hideToolbar,
+  onFocus,
+  onBlur,
 }: EditorProps) {
   const [value, setValue] = useState(content);
   const [styles, cx] = useStyles(editorStyleSheet);
-  const [focus, setFocus] = useState(false);
-  const [collapsed, setCollapsed] = useState(initialCollapsed ?? false);
-  const [hideToolbar, setHideToolbar] = useState(initialHideToolbar);
-  const { color } = useTheme();
 
   const uid = useRecoilValue(uidState);
 
@@ -108,43 +109,13 @@ export default function Editor({
     <div
       className={cx(
         styles.editor_wrap,
-        !hideToolbar && styles.editor_wrap_hide_toolbar
+        (!hideToolbar || collapsed) && styles.editor_wrap_hide_toolbar
       )}
     >
-      {/* <HiddenButtons isHidden={!hover && !focus}>
-        <>
-          {extraHiddenButtons}
-          <HiddenButton
-            onClick={() => {
-              set(ref(db, `${uid}/tasks/${id}/hideToolbar`), !hideToolbar);
-              setHideToolbar(!hideToolbar);
-            }}
-          >
-            {hideToolbar ? (
-              <IconTitle decorative color={color.core.secondary[6]} />
-            ) : (
-              <IconTitle decorative />
-            )}
-          </HiddenButton>
-          <HiddenButton
-            onClick={() => {
-              set(ref(db, `${uid}/tasks/${id}/collapsed`), !collapsed);
-
-              setCollapsed(!collapsed);
-            }}
-          >
-            {collapsed ? (
-              <IconChevronDown decorative />
-            ) : (
-              <IconChevronUp decorative />
-            )}
-          </HiddenButton>
-        </>
-      </HiddenButtons> */}
       <span className={cx(collapsed && styles.editor_wrap_max_height)}>
         <ReactQuill
-          onFocus={() => setFocus(true)}
-          onBlur={() => setFocus(false)}
+          onFocus={onFocus}
+          onBlur={onBlur}
           className="editor"
           theme="snow"
           value={value}

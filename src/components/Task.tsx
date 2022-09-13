@@ -3,29 +3,26 @@ import { useState } from "react";
 import useStyles, { StyleSheet } from "@airbnb/lunar/lib/hooks/useStyles";
 import produce from "immer";
 import { Dispatch, memo, SetStateAction } from "react";
-import { Draggable, DraggableProvided } from "react-beautiful-dnd";
+import { Draggable } from "react-beautiful-dnd";
 import { set, update, ref, remove } from "firebase/database";
 import { useRecoilValue, useRecoilState } from "recoil";
 
 import { db, hasItemsPath } from "../setup/setupFirebase";
 
 import IconButton from "@airbnb/lunar/lib/components/IconButton";
-import MenuToggle, {
-  Item as MenuItem,
-} from "@airbnb/lunar/lib/components/MenuToggle";
 import Spacing from "@airbnb/lunar/lib/components/Spacing";
 import IconCheck from "@airbnb/lunar-icons/lib/interface/IconCheck";
 import IconClose from "@airbnb/lunar-icons/lib/interface/IconClose";
 import IconCheckAlt from "@airbnb/lunar-icons/lib/interface/IconCheckAlt";
 import IconUndo from "@airbnb/lunar-icons/lib/interface/IconUndo";
 import IconNotes from "@airbnb/lunar-icons/lib/general/IconNotes";
-
 import IconAdd from "@airbnb/lunar-icons/lib/interface/IconAdd";
+import IconTitle from "@airbnb/lunar-icons/lib/general/IconTitle";
+import IconChevronDown from "@airbnb/lunar-icons/lib/interface/IconChevronDown";
+import IconChevronUp from "@airbnb/lunar-icons/lib/interface/IconChevronUp";
 import IconAssignment from "@airbnb/lunar-icons/lib/general/IconAssignment";
 import IconWatch from "@airbnb/lunar-icons/lib/general/IconWatch";
 import IconFlower from "@airbnb/lunar-icons/lib/general/IconFlower";
-
-import IconMenuDotsVert from "@airbnb/lunar-icons/lib/interface/IconMenuDotsVert";
 import IconExpand from "@airbnb/lunar-icons/lib/interface/IconExpand";
 
 import Card from "./Card";
@@ -63,6 +60,8 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
   const uid = useRecoilValue(uidState);
   const [pkd, setPkd] = useRecoilState(pkdState);
   const [hover, setHover] = useState(false);
+  const [collapsed, setCollapsed] = useState(item.collapsed ?? false);
+  const [hideToolbar, setHideToolbar] = useState(item.hideToolbar);
   const { color } = useTheme();
 
   const { title, id, completed, subtasks, required, times, frequency } = item;
@@ -71,6 +70,9 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
 
   const setNewValue = (newValue: any, field: string | (string | number)[]) => {
     if (typeof field == "object") {
+      const path = `${uid}/tasks/${field.join("/")}`;
+      set(ref(db, path), newValue);
+
       setItems((items) =>
         produce(items, (draftState) => {
           let tempObj = { ...draftState };
@@ -305,6 +307,22 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
                         setPkd(newPkd);
                         set(ref(db, `${uid}/${PKD_KEY}`), newPkd);
 
+                        if (!!item.required && !!subtasks) {
+                          const numComplete =
+                            Object.values(subtasks).reduce(
+                              (acc, subtask) =>
+                                subtask.completed ? acc + 1 : acc,
+                              0
+                            ) - 1;
+
+                          if (numComplete < item.required) {
+                            const newPkd = pkd - 10;
+                            setPkd(newPkd);
+                            set(ref(db, `${uid}/${PKD_KEY}`), newPkd);
+                            setNewValue(0, [id, "completed"]);
+                          }
+                        }
+
                         setNewValue(0, [
                           id,
                           "subtasks",
@@ -321,6 +339,23 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
                         const newPkd = pkd + 2;
                         setPkd(newPkd);
                         set(ref(db, `${uid}/${PKD_KEY}`), newPkd);
+
+                        if (!!item.required && !!subtasks) {
+                          const numComplete =
+                            Object.values(subtasks).reduce(
+                              (acc, subtask) =>
+                                subtask.completed ? acc + 1 : acc,
+                              0
+                            ) + 1;
+
+                          console.log(numComplete);
+                          if (numComplete >= item.required) {
+                            const newPkd = pkd + 10;
+                            setPkd(newPkd);
+                            set(ref(db, `${uid}/${PKD_KEY}`), newPkd);
+                            setNewValue(1, [id, "completed"]);
+                          }
+                        }
 
                         setNewValue(1, [
                           id,
@@ -413,50 +448,74 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
                       </HiddenButton>
                     </div>
                     {menuOptions}
+
+                    <HiddenButton
+                      onClick={() => {
+                        set(
+                          ref(db, `${uid}/tasks/${id}/collapsed`),
+                          !collapsed
+                        );
+
+                        setCollapsed(!collapsed);
+                      }}
+                    >
+                      {collapsed ? (
+                        <IconChevronDown
+                          decorative
+                          color={color.core.secondary[6]}
+                        />
+                      ) : (
+                        <IconChevronUp decorative />
+                      )}
+                    </HiddenButton>
+                    <HiddenButton
+                      onClick={() => {
+                        if (!hideToolbar && collapsed) {
+                          set(ref(db, `${uid}/tasks/${id}/collapsed`), false);
+
+                          setCollapsed(false);
+                        }
+                        set(
+                          ref(db, `${uid}/tasks/${id}/hideToolbar`),
+                          !hideToolbar
+                        );
+                        setHideToolbar(!hideToolbar);
+                      }}
+                    >
+                      {hideToolbar ? (
+                        <IconTitle decorative color={color.core.secondary[6]} />
+                      ) : (
+                        <IconTitle decorative />
+                      )}
+                    </HiddenButton>
                   </>
                 </HiddenButtons>
                 <Spacing inner vertical={1} horizontal={1.5}>
-                  <Row
-                    compact
-                    middleAlign
-                    after={
-                      <>
-                        <Spacing inline right={1}>
-                          {renews() ?? <></>}
-                        </Spacing>
-                        {item.times || item.frequency ? (
-                          <>
-                            <Spacing inline right={1}>
-                              <IconButton
-                                disabled={item.completed < 1}
-                                onClick={handleUncomplete}
-                              >
-                                <IconUndo decorative />
-                              </IconButton>
-                            </Spacing>
-                            <IconButton onClick={handleComplete}>
-                              <IconCheckAlt decorative />
-                            </IconButton>
-                          </>
-                        ) : item.completed ? (
-                          <IconButton onClick={handleUncomplete}>
-                            <IconUndo decorative />
-                          </IconButton>
-                        ) : (
-                          <IconButton onClick={handleComplete}>
-                            <IconCheckAlt decorative />
-                          </IconButton>
-                        )}
-                      </>
-                    }
+                  <div
+                    className={cx({
+                      display: "flex",
+                    })}
                   >
-                    {item.type === Types.Editor ? (
+                    <div
+                      className={cx({
+                        display: "flex",
+                        alignItems: "center",
+                        flexGrow: 1,
+                      })}
+                    >
                       <Editor
-                        hover={hover}
                         id={id}
                         content={title}
-                        initialCollapsed={item.collapsed}
-                        initialHideToolbar={item.hideToolbar}
+                        collapsed={collapsed}
+                        hideToolbar={hideToolbar}
+                        onFocus={() => {
+                          setCollapsed(false);
+                        }}
+                        onBlur={() => {
+                          if (item.collapsed) {
+                            setCollapsed(true);
+                          }
+                        }}
                         extraHiddenButtons={
                           <div {...provided.dragHandleProps}>
                             <HiddenButton onClick={() => {}}>
@@ -465,18 +524,48 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
                           </div>
                         }
                       />
+                    </div>
+
+                    {item.type === Types.Task ? (
+                      <div>
+                        <Spacing inline right={1}>
+                          {renews() ?? <></>}
+                        </Spacing>
+                        {item.times || item.frequency ? (
+                          <>
+                            <Spacing inner inline right={1}>
+                              <IconButton
+                                disabled={item.completed < 1}
+                                onClick={handleUncomplete}
+                              >
+                                <IconUndo decorative />
+                              </IconButton>
+                            </Spacing>
+
+                            <IconButton onClick={handleComplete}>
+                              <IconCheckAlt decorative />
+                            </IconButton>
+                          </>
+                        ) : item.completed ? (
+                          <IconButton
+                            disabled={!!item.required}
+                            onClick={handleUncomplete}
+                          >
+                            <IconUndo decorative />
+                          </IconButton>
+                        ) : (
+                          <IconButton
+                            disabled={!!item.required}
+                            onClick={handleComplete}
+                          >
+                            <IconCheckAlt decorative />
+                          </IconButton>
+                        )}
+                      </div>
                     ) : (
-                      <InlineInput
-                        bold
-                        item={item}
-                        completed={completed}
-                        value={title}
-                        callback={setNewValue}
-                        callbackProps={"title"}
-                        callbackOnSubmit={handleEditTitle}
-                      />
+                      <></>
                     )}
-                  </Row>
+                  </div>
                 </Spacing>
               </div>
             </Card>
@@ -489,20 +578,3 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
 }
 
 export const MemoizedTask = memo(Task);
-
-{
-  /* <div className={cx(styles.flex)}>
-<MenuToggle
-  closeOnClick
-  accessibilityLabel="Actions"
-  toggleIcon={<IconMenuDotsVert decorative />}
-  toggleLabel="Actions"
-  zIndex={10}
-  dropdownProps={{
-    left: 0,
-  }}
->
-  {menuOptions}
-</MenuToggle>
-</div> */
-}

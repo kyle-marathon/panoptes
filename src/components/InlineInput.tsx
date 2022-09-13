@@ -60,7 +60,7 @@ export default function InlineInput({
           className={cx(
             styles.input,
             bold && styles.input_bold,
-            (!isItemLive(item) || (isSubtask && !!completed)) &&
+            ((!isSubtask && !isItemLive(item)) || (isSubtask && !!completed)) &&
               styles.input_completed
           )}
           type="text"

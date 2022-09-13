@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-import { ref, onValue } from "firebase/database";
+import { ref, get, onValue } from "firebase/database";
 // import * as firebaseui from "firebaseui";
 import "firebaseui/dist/firebaseui.css";
 import { auth } from "./setup/setupFirebase";
@@ -12,12 +12,13 @@ import { RecoilRoot, useSetRecoilState, useRecoilState } from "recoil";
 import Login from "./components/Login";
 import App from "./App";
 
-import { uidState, lastIdState } from "./atoms";
+import { uidState, lastIdState, pkdState } from "./atoms";
 import { UID_KEY } from "./utils/constants";
 
 export function EntryWithRecoil() {
   const [user, loading, error] = useAuthState(auth);
   const [uid, setUid] = useRecoilState(uidState);
+  const setPkd = useSetRecoilState(pkdState);
   const setLastId = useSetRecoilState(lastIdState);
 
   useEffect(() => {
@@ -26,6 +27,12 @@ export function EntryWithRecoil() {
       setUid(localUid);
     }
   }, []);
+
+  useEffect(() => {
+    get(ref(db, `${uid}/pkd`)).then((snapshot) => {
+      setPkd(snapshot.val());
+    });
+  }, [uid]);
 
   useEffect(() => {
     if (user) {
