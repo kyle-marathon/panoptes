@@ -2,6 +2,7 @@ import SubItemCard from "./SubItemCard";
 
 import Row from "../Row";
 import Spacing from "@airbnb/lunar/lib/components/Spacing";
+import Text from "@airbnb/lunar/lib/components/Text";
 import IconButton from "@airbnb/lunar/lib/components/IconButton";
 import IconRemove from "@airbnb/lunar-icons/lib/interface/IconRemove";
 import IconAdd from "@airbnb/lunar-icons/lib/interface/IconAdd";
@@ -20,7 +21,7 @@ export default function Frequency({
   setNewValue,
 }: FrequencyProps) {
   return (
-    <SubItemCard isDragging={isDragging}>
+    <SubItemCard italic isDragging={isDragging}>
       <Row
         after={
           <>
@@ -56,14 +57,16 @@ export default function Frequency({
           </>
         }
       >
-        {frequency > 7
-          ? `Repeats every ${frequency / 7} weeks`
-          : frequency == 7
-          ? `Repeats every week`
-          : frequency > 1
-          ? `Repeats every ${frequency} days`
-          : `Repeats every day`}{" "}
-        [completed {completed} {completed == 1 ? "time" : "times"}]
+        <Text>
+          {frequency > 7
+            ? `Repeats every ${frequency / 7} weeks`
+            : frequency == 7
+            ? `Repeats every week`
+            : frequency > 1
+            ? `Repeats every ${frequency} days`
+            : `Repeats every day`}{" "}
+          [completed {completed} {completed == 1 ? "time" : "times"}]
+        </Text>
       </Row>
     </SubItemCard>
   );

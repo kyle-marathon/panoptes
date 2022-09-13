@@ -19,6 +19,8 @@ export type Subtask = {
   title: string;
   id: string;
   completed: number;
+  collapsed?: boolean;
+  hideToolbar?: boolean;
 };
 
 export type Subtasks = { [key: string]: Subtask };

@@ -3,7 +3,10 @@ import { useState } from "react";
 import useStyles, { StyleSheet } from "@airbnb/lunar/lib/hooks/useStyles";
 import produce from "immer";
 import { Dispatch, memo, SetStateAction } from "react";
-import { Draggable } from "react-beautiful-dnd";
+import {
+  Draggable,
+  DraggableProvidedDragHandleProps,
+} from "react-beautiful-dnd";
 import { set, update, ref, remove } from "firebase/database";
 import { useRecoilValue, useRecoilState } from "recoil";
 
@@ -25,6 +28,7 @@ import IconWatch from "@airbnb/lunar-icons/lib/general/IconWatch";
 import IconFlower from "@airbnb/lunar-icons/lib/general/IconFlower";
 import IconExpand from "@airbnb/lunar-icons/lib/interface/IconExpand";
 
+import SubItems from "./SubItems";
 import Card from "./Card";
 import Row from "./Row";
 import Frequency from "./SubItems/Frequency";
@@ -47,6 +51,8 @@ type TaskProps = {
   setItems: Dispatch<SetStateAction<Items>>;
   item: Item;
 };
+
+type UpdateData = { [key: string]: any };
 
 export const taskStyleSheet: StyleSheet = ({ color, font, unit }) => ({
   flex: {
@@ -100,8 +106,6 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
   const handleAddField = (type: string) => {
     setNewValue(fieldDefaults[type], type);
   };
-
-  type UpdateData = { [key: string]: any };
 
   const handleUpdate = (newData: UpdateData) => {
     const updates: UpdateData = {};
@@ -208,7 +212,6 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
     const newSubtask = { title: "", id: newId, completed: 0, isEditor };
 
     set(ref(db, `${dbPath}/subtasks/${newId}`), newSubtask);
-    // setNewValue({ [newId]: newSubtask }, "subtasks");
     setNewValue({ ...subtasks, [newId]: newSubtask }, "subtasks");
   };
 
@@ -276,142 +279,18 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
     </HiddenButton>
   );
 
-  const handleEditSubtaskTitle = (value: string, subtaskId: string) => {
-    set(ref(db, `${dbPath}/subtasks/${subtaskId}/title`), value);
-  };
-
-  const handleEditTitle = (value: string) => {
-    set(ref(db, `${dbPath}/title`), value);
-  };
-
-  const subtaskValues = subtasks ? Object.values(subtasks) : [];
-
-  const subItems = (isDragging: boolean) => (
-    <>
-      {numSubtasks > 0 &&
-        subtaskValues.reverse().map((subtask, index) => (
-          <SubItemCard key={subtask.id} isDragging={isDragging}>
-            <Row
-              middleAlign
-              after={
-                <>
-                  <Spacing inline right={1}>
-                    <IconButton onClick={() => deleteSubtask(subtask.id)}>
-                      <IconClose decorative />
-                    </IconButton>
-                  </Spacing>
-                  {subtask.completed ? (
-                    <IconButton
-                      onClick={() => {
-                        const newPkd = pkd - 2;
-                        setPkd(newPkd);
-                        set(ref(db, `${uid}/${PKD_KEY}`), newPkd);
-
-                        if (!!item.required && !!subtasks) {
-                          const numComplete =
-                            Object.values(subtasks).reduce(
-                              (acc, subtask) =>
-                                subtask.completed ? acc + 1 : acc,
-                              0
-                            ) - 1;
-
-                          if (numComplete < item.required) {
-                            const newPkd = pkd - 10;
-                            setPkd(newPkd);
-                            set(ref(db, `${uid}/${PKD_KEY}`), newPkd);
-                            setNewValue(0, [id, "completed"]);
-                          }
-                        }
-
-                        setNewValue(0, [
-                          id,
-                          "subtasks",
-                          subtask.id,
-                          "completed",
-                        ]);
-                      }}
-                    >
-                      <IconUndo decorative />
-                    </IconButton>
-                  ) : (
-                    <IconButton
-                      onClick={() => {
-                        const newPkd = pkd + 2;
-                        setPkd(newPkd);
-                        set(ref(db, `${uid}/${PKD_KEY}`), newPkd);
-
-                        if (!!item.required && !!subtasks) {
-                          const numComplete =
-                            Object.values(subtasks).reduce(
-                              (acc, subtask) =>
-                                subtask.completed ? acc + 1 : acc,
-                              0
-                            ) + 1;
-
-                          console.log(numComplete);
-                          if (numComplete >= item.required) {
-                            const newPkd = pkd + 10;
-                            setPkd(newPkd);
-                            set(ref(db, `${uid}/${PKD_KEY}`), newPkd);
-                            setNewValue(1, [id, "completed"]);
-                          }
-                        }
-
-                        setNewValue(1, [
-                          id,
-                          "subtasks",
-                          subtask.id,
-                          "completed",
-                        ]);
-                      }}
-                    >
-                      <IconCheck decorative />
-                    </IconButton>
-                  )}
-                </>
-              }
-            >
-              <InlineInput
-                isSubtask
-                item={item}
-                completed={subtask.completed}
-                value={subtask.title}
-                callback={setNewValue}
-                callbackProps={[id, "subtasks", subtask.id, "title"]}
-                callbackOnSubmit={handleEditSubtaskTitle}
-                callbackOnSubmitProps={subtask.id}
-              />
-            </Row>
-          </SubItemCard>
-        ))}
-      {frequency && (
-        <Frequency
-          completed={completed}
-          isDragging={isDragging}
-          frequency={frequency}
-          setNewValue={setNewValue}
-        />
-      )}
-      {times && (
-        <Times
-          isDragging={isDragging}
-          times={times}
-          completed={completed}
-          setNewValue={setNewValue}
-        />
-      )}
-      {subtasks && numSubtasks && required ? (
-        <Required
-          subtasks={subtasks}
-          isDragging={isDragging}
-          required={required}
-          numSubtasks={numSubtasks}
-          setNewValue={setNewValue}
-        />
-      ) : (
-        <></>
-      )}
-    </>
+  const subItems = (
+    isDragging: boolean,
+    dragHandleProps?: DraggableProvidedDragHandleProps
+  ) => (
+    <SubItems
+      numSubtasks={numSubtasks}
+      isDragging={isDragging}
+      item={item}
+      setNewValue={setNewValue}
+      deleteSubtask={deleteSubtask}
+      dragHandleProps={dragHandleProps}
+    />
   );
 
   const renews = () => {
@@ -570,7 +449,8 @@ function Task({ showDetails, index, setItems, item }: TaskProps) {
               </div>
             </Card>
           </Spacing>
-          {showDetails && subItems(snapshot.isDragging)}
+          {showDetails &&
+            subItems(snapshot.isDragging, provided.dragHandleProps)}
         </div>
       )}
     </Draggable>

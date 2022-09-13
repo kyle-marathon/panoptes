@@ -2,6 +2,7 @@ import SubItemCard from "./SubItemCard";
 
 import Row from "../Row";
 import Spacing from "@airbnb/lunar/lib/components/Spacing";
+import Text from "@airbnb/lunar/lib/components/Text";
 import IconButton from "@airbnb/lunar/lib/components/IconButton";
 import IconRemove from "@airbnb/lunar-icons/lib/interface/IconRemove";
 import IconAdd from "@airbnb/lunar-icons/lib/interface/IconAdd";
@@ -29,7 +30,7 @@ export default function Required({
   );
 
   return (
-    <SubItemCard isDragging={isDragging}>
+    <SubItemCard italic isDragging={isDragging}>
       <Row
         after={
           <>
