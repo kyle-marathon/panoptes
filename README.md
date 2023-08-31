@@ -123,3 +123,4 @@ Naming
 - - Then main task cannot be marked "uncompleted"
 - - In general, main task cannot be marked complete or incomplete if it has the requirements field
 - Items get crossed out on completion [DONE]
+# panoptes
