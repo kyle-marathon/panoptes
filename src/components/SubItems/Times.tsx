@@ -21,18 +21,18 @@ export default function Times({
 }: TimesProps) {
   const beforeContent = (
     <>
-      <Spacing inner inline right={1}>
+      <Spacing inner inline right={0.5}>
         <IconButton
           disabled={times <= 2 || times <= completed}
           onClick={() => {
             setNewValue(times - 1, "times");
           }}
         >
-          <IconRemove decorative />
+          <IconRemove decorative size="0.887em" />
         </IconButton>
       </Spacing>
       <IconButton onClick={() => setNewValue(times + 1, "times")}>
-        <IconAdd decorative />
+        <IconAdd decorative size="0.887em" />
       </IconButton>
     </>
   );

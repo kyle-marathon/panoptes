@@ -44,7 +44,9 @@ export const formatedDate = (date: Date) => {
 };
 
 export const getBodyWidth = (unit: number) =>
-  Math.min(window.innerWidth - unit * 8, unit * 62);
+  Math.min(window.innerWidth, unit * 72);
 
-export const getCardInnerWidth = (unit: number) =>
-  Math.min(window.innerWidth - unit * 15, unit * 54);
+export const getCardInnerWidth = (unit: number) => {
+  const width = Math.min(window.innerWidth - unit * 10.5, unit * 61.75);
+  return width;
+};

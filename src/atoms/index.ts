@@ -25,3 +25,21 @@ export const isOnlineState = atom({
   // default: !window.location.href.includes("localhost"),
   default: true,
 });
+
+export const itemsState = atom({
+  key: "items",
+  default: {},
+});
+
+export const hasItemsState = atom({
+  key: "hasItems",
+  default: true,
+});
+
+export const configState = atom({
+  key: "config",
+  default: {
+    showDetails: true,
+    showCompleted: true,
+  },
+});

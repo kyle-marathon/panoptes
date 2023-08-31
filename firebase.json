@@ -1,7 +1,10 @@
 {
+  "database": {
+    "rules": "database.rules.json"
+  },
   "hosting": {
     "public": "build",
-    "site": "zoan-fruit",
+    "site": "pano-41fdf",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
   }
 }

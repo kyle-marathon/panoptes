@@ -24,6 +24,7 @@ Nice to have features
 Performance
 
 - New Item Input forces all of App to reload when you type
+- Memoize Team
 
 Battle System
 
@@ -95,6 +96,12 @@ New Features
 Not required
 
 - Don't write to db when offline
+- Tasks are slightly off center
+
+Naming
+
+- isEditor => Type
+- title => content
 
   Todo
 
@@ -110,10 +117,9 @@ Not required
 - When created, editor bolds first line [DONE]
 - Editors can be deleted [DONE]
 - Editor <> Task conversion [DONE]
-
-- Subtasks can be text editors
-
-- Interactions between Required/Times/Frequency
+- Subtasks can be text editors [DONE]
+- Interactions between Required/Times/Frequency [DONE]
 - - If subitems are completed, main task should be marked complete
 - - Then main task cannot be marked "uncompleted"
 - - In general, main task cannot be marked complete or incomplete if it has the requirements field
+- Items get crossed out on completion [DONE]

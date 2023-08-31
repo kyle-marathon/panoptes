@@ -25,7 +25,7 @@ export default function Frequency({
       <Row
         after={
           <>
-            <Spacing inner inline right={1}>
+            <Spacing inner inline right={0.5}>
               <IconButton
                 disabled={frequency < 2}
                 onClick={() => {
@@ -38,7 +38,7 @@ export default function Frequency({
                   setNewValue(newDays, "frequency");
                 }}
               >
-                <IconRemove decorative />
+                <IconRemove decorative size="0.887em" />
               </IconButton>
             </Spacing>
             <IconButton
@@ -52,7 +52,7 @@ export default function Frequency({
                 setNewValue(newDays, "frequency");
               }}
             >
-              <IconAdd decorative />
+              <IconAdd decorative size="0.887em" />
             </IconButton>
           </>
         }

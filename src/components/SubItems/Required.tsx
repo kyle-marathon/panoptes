@@ -34,14 +34,14 @@ export default function Required({
       <Row
         after={
           <>
-            <Spacing inner inline right={1}>
+            <Spacing inner inline right={0.5}>
               <IconButton
                 disabled={required == 1}
                 onClick={() => {
                   setNewValue(required - 1, "required");
                 }}
               >
-                <IconRemove decorative />
+                <IconRemove decorative size="0.887em" />
               </IconButton>
             </Spacing>
             <IconButton
@@ -50,7 +50,7 @@ export default function Required({
                 setNewValue(required + 1, "required");
               }}
             >
-              <IconAdd decorative />
+              <IconAdd decorative size="0.887em" />
             </IconButton>
           </>
         }
